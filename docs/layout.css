@@ -1,0 +1,68 @@
+h1 {
+	font-weight: bold;
+	font-size: 2em;
+	text-align: center;
+	padding-bottom: 10px;
+	border-bottom: solid black 1px;
+}
+
+div.section {
+	margin: 0;
+	margin-bottom: 10px;
+	text-align: justify;
+}
+
+div.section p {
+	font-size: 1em;
+}
+
+div.section span.reference {
+	font-size: .8em;
+	font-style: italic;
+}
+
+div.section h1 {
+	font-weight: bold;
+	font-size: 1.2em;
+	border: 0;
+	padding: 0;
+	text-align: left;
+}
+
+div.section h3 {
+	font-weight: bold;
+	font-size: 1em;
+	display: inline;
+}
+
+div.fig {
+	float: right;
+	border: 1px solid black;
+	margin: 10px;
+	margin-top: 0;
+	padding: 10px;
+	width: 300px;
+	text-align: center;
+	clear: both;
+}
+
+div.fig img {
+	width: 80%;
+}
+
+div.pseudocode pre {
+	font-family: monaco, monospace;
+	font-size: 0.8em;
+	text-align: left;
+}
+
+span.caption {
+	text-align: center;
+	margin-left: 10%;
+	margin-right: 10%;
+	font-style: italic;
+	font-family: helvetica, sans-serif;
+	font-size: 0.7em;
+}
+
+
