@@ -2,7 +2,7 @@ CC=gcc
 #CXX=g++
 CXX=clang++
 
-COMMON=-g -O3 -Wall # -g for VTune Analysis
+COMMON=-g -O0 -Wall # -g for VTune Analysis
 LDFLAGS=-ltbb
 
 CFLAGS = $(COMMON)

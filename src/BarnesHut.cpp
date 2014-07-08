@@ -224,8 +224,7 @@ OctTreeInternalNode * OctTreeInternalNode::InsertThenReportParent(OctTreeLeafNod
 
 void OctTreeInternalNode::InsertAll(OctTreeLeafNode ** const b, const int n, const double r)
 {
-	if (n == 1) {
-		Insert(b[0], r);
+	if (n == 0) {
 		return;
 	}
 	OctTreeLeafNode ***partition = new OctTreeLeafNode**[8];
