@@ -72,6 +72,8 @@ public:
 
 public:
 	void Insert(OctTreeLeafNode * const b, const double r); // builds the tree
+	OctTreeInternalNode *InsertThenReportParent(OctTreeLeafNode * const b, const double r, double &parentR);
+	void InsertAll(OctTreeLeafNode ** const b, const int n, const double r);
 	void ComputeCenterOfMass(int &curr); // recursively summarizes info about subtrees
 
 	OctTreeNode *child[8];
@@ -80,6 +82,7 @@ private:
 	OctTreeInternalNode *link; // links all internal tree nodes so they can be recycled
 	static OctTreeInternalNode *head, *freelist; // free list for recycling
 
+	int ChildID(OctTreeLeafNode * const b);
 };
 
 class OctTreeLeafNode: public OctTreeNode { // the tree leaves are the bodies
@@ -137,6 +140,23 @@ OctTreeInternalNode *OctTreeInternalNode::NewNode(const double px, const double 
 	return in;
 }
 
+int OctTreeInternalNode::ChildID(OctTreeLeafNode * const b)
+{
+	register int i = 0;
+
+	if (posx < b->posx) {
+		i = 1;
+	}
+	if (posy < b->posy) {
+		i += 2;
+	}
+	if (posz < b->posz) {
+		i += 4;
+	}
+
+	return i;
+}
+
 void OctTreeInternalNode::Insert(OctTreeLeafNode * const b, const double r) // builds the tree
 {
 	register int i = 0;
@@ -165,6 +185,67 @@ void OctTreeInternalNode::Insert(OctTreeLeafNode * const b, const double r) // b
 		cell->Insert(b, rh);
 		cell->Insert((OctTreeLeafNode *) (child[i]), rh);
 		child[i] = cell;
+	}
+}
+
+OctTreeInternalNode * OctTreeInternalNode::InsertThenReportParent(OctTreeLeafNode * const b, const double r, double &parentR)
+{
+	register int i = 0;
+	register double x = 0.0, y = 0.0, z = 0.0;
+
+	if (posx < b->posx) {
+		i = 1;
+		x = r;
+	}
+	if (posy < b->posy) {
+		i += 2;
+		y = r;
+	}
+	if (posz < b->posz) {
+		i += 4;
+		z = r;
+	}
+
+	if (child[i] == NULL) {
+		child[i] = b;
+		parentR = r;
+		return this;
+	} else if (child[i]->type == CELL) {
+		return ((OctTreeInternalNode *) (child[i]))->InsertThenReportParent(b, 0.5 * r, parentR);
+	} else {
+		register const double rh = 0.5 * r;
+		register OctTreeInternalNode * const cell = NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
+		OctTreeInternalNode *parentNode = cell->InsertThenReportParent(b, rh, parentR);
+		cell->Insert((OctTreeLeafNode *) (child[i]), rh);
+		child[i] = cell;
+		return parentNode;
+	}
+}
+
+void OctTreeInternalNode::InsertAll(OctTreeLeafNode ** const b, const int n, const double r)
+{
+	if (n == 1) {
+		Insert(b[0], r);
+		return;
+	}
+	OctTreeLeafNode ***partition = new OctTreeLeafNode**[8];
+	int partitionSize[8];
+	for (int i = 0; i < 8; ++i) {
+		partition[i] = new OctTreeLeafNode*[n];
+		partitionSize[i] = 0;
+	}
+	for (int i = 0; i < n; ++i) {
+		int partitionID = ChildID(b[i]);
+		partition[partitionID][partitionSize[partitionID]] = b[i];
+		++partitionSize[partitionID];
+	}
+	for (int i = 0; i < 8; ++i) {
+		if (partitionSize[i] > 0) {
+			double parentR;
+			OctTreeInternalNode *parentNode = InsertThenReportParent(partition[i][partitionSize[i] - 1], r, parentR);
+			--partitionSize[i];
+			parentNode->InsertAll(partition[i], partitionSize[i], parentR);
+		}
 	}
 }
 
@@ -487,9 +568,10 @@ int main(int argc, char *argv[]) {
 			OctTreeInternalNode *local_root = OctTreeInternalNode::NewNode(centerx, centery, centerz); // create the tree's root
 
 			const double radius = diameter * 0.5;
-			for (int i = 0; i < nbodies; i++) {
-				local_root->Insert(bodies[i], radius); // grow the tree by inserting each body
-			}
+//			for (int i = 0; i < nbodies; i++) {
+//				local_root->Insert(bodies[i], radius); // grow the tree by inserting each body
+//			}
+			local_root->InsertAll(bodies, nbodies, radius);
 
 			register int curr = 0;
 			local_root->ComputeCenterOfMass(curr); // summarize subtree info in each internal node (plus restructure tree and sort bodies for performance reasons)
