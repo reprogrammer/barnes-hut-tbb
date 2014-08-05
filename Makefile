@@ -2,11 +2,11 @@ CC=gcc
 #CXX=g++
 CXX=clang++
 
-COMMON=-g -O0 -Wall # -g for VTune Analysis
-LDFLAGS=-ltbb
+COMMON=-g -O0 -Wall
+LDFLAGS=-ltbb #-v
 
 CFLAGS = $(COMMON)
-CXXFLAGS = $(COMMON)
+CXXFLAGS = $(COMMON) -std=c++11 #-stdlib=libc++ -fsanitize=address 
 
 # Modify for your platform
 TBB21_INSTALL_DIR=/opt/intel/tbb/2.1

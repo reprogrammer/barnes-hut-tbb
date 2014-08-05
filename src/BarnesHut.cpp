@@ -36,6 +36,7 @@
 #include "tbb/task_scheduler_init.h"
 #include "tbb/blocked_range.h"
 #include "tbb/parallel_for.h"
+#include "tbb/task_group.h"
 
 static double dtime; // length of one time step
 static double eps; // potential softening parameter
@@ -93,7 +94,7 @@ private:
 	static OctTreeInternalNode *head, *freelist; // free list for recycling
 
 	int ChildID(OctTreeLeafNode * const b);
-	void ChildIDToPos(int childID, double radius, double &x , double &y, double &z);
+	void ChildIDToPos(int childID, double radius, double &x, double &y, double &z);
 };
 
 class OctTreeLeafNode: public OctTreeNode { // the tree leaves are the bodies
@@ -132,16 +133,19 @@ OctTreeInternalNode *OctTreeInternalNode::NewNode(const double px, const double 
 #ifdef DEBUG
 	cout << "NewNode(px = " << px << ", py = " << py << ", pz = " << pz << ")" << endl;
 #endif
-	register OctTreeInternalNode *in;
+	OctTreeInternalNode *in;
 
-	if (freelist == NULL) {
-		in = new OctTreeInternalNode();
-		in->link = head;
-		head = in;
-	} else { // get node from freelist
-		in = freelist;
-		freelist = freelist->link;
-	}
+	in = new OctTreeInternalNode();
+	//Accesses to freelist should be atomic when NewNode is called
+	//concurrently.
+	//if (freelist == NULL) {
+	//	in = new OctTreeInternalNode();
+	//	in->link = head;
+	//	head = in;
+	//} else { // get node from freelist
+	//	in = freelist;
+	//	freelist = freelist->link;
+	//}
 
 	in->type = CELL;
 	in->mass = 0.0;
@@ -156,7 +160,7 @@ OctTreeInternalNode *OctTreeInternalNode::NewNode(const double px, const double 
 
 int OctTreeInternalNode::ChildID(OctTreeLeafNode * const b)
 {
-	register int i = 0;
+	int i = 0;
 
 	if (posx < b->posx) {
 		i = 1;
@@ -173,7 +177,7 @@ int OctTreeInternalNode::ChildID(OctTreeLeafNode * const b)
 	return i;
 }
 
-void OctTreeInternalNode::ChildIDToPos(int childID, double radius, double &x , double &y, double &z) {
+void OctTreeInternalNode::ChildIDToPos(int childID, double radius, double &x, double &y, double &z) {
 	x = y = z = 0;
 	if (childID >= 4) {
 		z = radius;
@@ -194,8 +198,8 @@ void OctTreeInternalNode::Insert(OctTreeLeafNode * const b, const double r) // b
 #ifdef DEBUG
 	cout << "Insert(*this = {type = " << type << ", mass = " << mass << ", posx = " << posx << ", posy = " << posy << ", posz = " << posz << "}, " << "*b = {type = " << b->type << ", mass = " << b->mass << ", posx = " << b->posx << ", posy = " << b->posy << ", posz = " << b->posz << "}" << ", r = " << r << ")" << endl;
 #endif
-	register int i = 0;
-	register double x = 0.0, y = 0.0, z = 0.0;
+	int i = 0;
+	double x = 0.0, y = 0.0, z = 0.0;
 
 	if (posx < b->posx) {
 		i = 1;
@@ -215,8 +219,8 @@ void OctTreeInternalNode::Insert(OctTreeLeafNode * const b, const double r) // b
 	} else if (child[i]->type == CELL) {
 		((OctTreeInternalNode *) (child[i]))->Insert(b, 0.5 * r);
 	} else {
-		register const double rh = 0.5 * r;
-		register OctTreeInternalNode * const cell = NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
+		const double rh = 0.5 * r;
+		OctTreeInternalNode * const cell = NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
 		cell->Insert(b, rh);
 		cell->Insert((OctTreeLeafNode *) (child[i]), rh);
 		child[i] = cell;
@@ -242,18 +246,22 @@ void OctTreeInternalNode::InsertAll(OctTreeLeafNode ** const b, const int n, con
 		partition[partitionID][partitionSize[partitionID]] = b[i];
 		++partitionSize[partitionID];
 	}
+	// https://software.intel.com/en-us/node/506118
+	tbb::task_group g;
 	for (int i = 0; i < 8; ++i) {
 		if (partitionSize[i] > 1) {
 			double x, y, z;
 			ChildIDToPos(i, r, x, y, z);
-			register const double rh = 0.5 * r;
-			register OctTreeInternalNode * const cell = NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
+			const double rh = 0.5 * r;
+			OctTreeInternalNode * const cell = NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
 			child[i] = cell;
-			cell->InsertAll(partition[i], partitionSize[i], rh);
+			//cell->InsertAll(partition[i], partitionSize[i], rh);
+			g.run([=]{cell->InsertAll(partition[i], partitionSize[i], rh);});
 		} else if (partitionSize[i] == 1) {
 			child[i] = partition[i][0];
 		}
 	}
+	g.wait();
 	for (int i = 0; i < 8; ++i) {
 		delete partition[i];
 	}
@@ -262,10 +270,10 @@ void OctTreeInternalNode::InsertAll(OctTreeLeafNode ** const b, const int n, con
 
 void OctTreeInternalNode::ComputeCenterOfMass(int &curr) // recursively summarizes info about subtrees
 {
-	register double m, px = 0.0, py = 0.0, pz = 0.0;
-	register OctTreeNode *ch;
+	double m, px = 0.0, py = 0.0, pz = 0.0;
+	OctTreeNode *ch;
 
-	register int j = 0;
+	int j = 0;
 	mass = 0.0;
 	for (int i = 0; i < 8; i++) {
 		ch = child[i];
@@ -308,8 +316,8 @@ OctTreeLeafNode::OctTreeLeafNode() {
 
 void OctTreeLeafNode::Advance() // advances a body's velocity and position by one time step
 {
-	register double dvelx, dvely, dvelz;
-	register double velhx, velhy, velhz;
+	double dvelx, dvely, dvelz;
+	double velhx, velhy, velhz;
 
 	dvelx = accx * dthf;
 	dvely = accy * dthf;
@@ -330,7 +338,7 @@ void OctTreeLeafNode::Advance() // advances a body's velocity and position by on
 
 void OctTreeLeafNode::ComputeForce(const OctTreeInternalNode * const root, const double size) // computes the acceleration and velocity of a body
 {
-	register double ax, ay, az;
+	double ax, ay, az;
 
 	ax = accx;
 	ay = accy;
@@ -351,7 +359,7 @@ void OctTreeLeafNode::ComputeForce(const OctTreeInternalNode * const root, const
 
 void OctTreeLeafNode::RecurseForce(const OctTreeNode * const n, double dsq) // recursively walks the tree to compute the force on a body
 {
-	register double drx, dry, drz, drsq, nphi, scale, idr;
+	double drx, dry, drz, drsq, nphi, scale, idr;
 
 	drx = n->posx - posx;
 	dry = n->posy - posy;
@@ -359,7 +367,7 @@ void OctTreeLeafNode::RecurseForce(const OctTreeNode * const n, double dsq) // r
 	drsq = drx * drx + dry * dry + drz * drz;
 	if (drsq < dsq) {
 		if (n->type == CELL) {
-			register OctTreeInternalNode *in = (OctTreeInternalNode *) n;
+			OctTreeInternalNode *in = (OctTreeInternalNode *) n;
 			dsq *= 0.25;
 			if (in->child[0] != NULL) {
 				RecurseForce(in->child[0], dsq);
@@ -414,7 +422,7 @@ static int grainSize; // number of parallel tasks
 
 static inline void ReadInput(char *filename) {
 	double vx, vy, vz;
-	register FILE *f;
+	FILE *f;
 
 	f = fopen(filename, "r+t");
 	if (f == NULL) {
@@ -462,9 +470,9 @@ static inline void ReadInput(char *filename) {
 
 static inline void ComputeCenterAndDiameter(const int n, double &diameter, double &centerx, double &centery,
 		double &centerz) {
-	register double minx, miny, minz;
-	register double maxx, maxy, maxz;
-	register double posx, posy, posz;
+	double minx, miny, minz;
+	double maxx, maxy, maxz;
+	double posx, posy, posz;
 
 	minx = 1.0E90;
 	miny = 1.0E90;
@@ -511,7 +519,7 @@ static inline int min(int a, int b) {
 }
 
 static void PrintDouble(double d) {
-	register int i;
+	int i;
 	char str[16];
 
 	sprintf(str, "%.4lE", d);
@@ -558,8 +566,8 @@ int main(int argc, char *argv[]) {
 		grainSize = atoi(argv[2]);
 
 	timeval starttime, endtime;
-	register long runtime, lasttime, mintime;
-	register int run;
+	long runtime, lasttime, mintime;
+	int run;
 
 	runtime = 0;
 	lasttime = -1;
@@ -573,7 +581,7 @@ int main(int argc, char *argv[]) {
 		gettimeofday(&starttime, NULL);
 
 		for (step = 0; step < timesteps; step++) { // time-step the system
-			register double diameter, centerx, centery, centerz;
+			double diameter, centerx, centery, centerz;
 			ComputeCenterAndDiameter(nbodies, diameter, centerx, centery, centerz);
 
 			OctTreeInternalNode *local_root = OctTreeInternalNode::NewNode(centerx, centery, centerz); // create the tree's root
@@ -584,7 +592,7 @@ int main(int argc, char *argv[]) {
 //			}
 			local_root->InsertAll(bodies, nbodies, radius);
 
-			register int curr = 0;
+			int curr = 0;
 			local_root->ComputeCenterOfMass(curr); // summarize subtree info in each internal node (plus restructure tree and sort bodies for performance reasons)
 
 			root = local_root;
