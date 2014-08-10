@@ -90,7 +90,7 @@ public:
 	OctTreeNode *child[8];
 
 private:
-	OctTreeInternalNode *link; // links all internal tree nodes so they can be recycled
+	//OctTreeInternalNode *link; // links all internal tree nodes so they can be recycled
 	static OctTreeInternalNode *head, *freelist; // free list for recycling
 
 	int ChildID(OctTreeLeafNode * const b);
