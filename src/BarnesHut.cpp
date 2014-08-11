@@ -86,8 +86,21 @@ public:
 	void Insert(OctTreeLeafNode * const b, const double r); // builds the tree
 	void InsertAll(OctTreeLeafNode ** const b, const int n, const double r);
 	void ComputeCenterOfMass(int &curr); // recursively summarizes info about subtrees
-
-	OctTreeNode *child[8];
+	OctTreeNode** GetChildRef(int i);
+	OctTreeNode* GetChild(int i);
+	OctTreeLeafNode ***GetPartitionRef(int i, OctTreeLeafNode **partition0,
+			OctTreeLeafNode **partition1, OctTreeLeafNode **partition2,
+			OctTreeLeafNode **partition3, OctTreeLeafNode **partition4,
+			OctTreeLeafNode **partition5, OctTreeLeafNode **partition6,
+			OctTreeLeafNode **partition7);
+	OctTreeLeafNode **GetPartition(int i, OctTreeLeafNode **partition0,
+			OctTreeLeafNode **partition1, OctTreeLeafNode **partition2,
+			OctTreeLeafNode **partition3, OctTreeLeafNode **partition4,
+			OctTreeLeafNode **partition5, OctTreeLeafNode **partition6,
+			OctTreeLeafNode **partition7);
+	//OctTreeNode *child[8];
+	OctTreeNode *child0, *child1, *child2, *child3, *child4, *child5,
+		    *child6, *child7;
 
 private:
 	//OctTreeInternalNode *link; // links all internal tree nodes so they can be recycled
@@ -95,6 +108,16 @@ private:
 
 	int ChildID(OctTreeLeafNode * const b);
 	void ChildIDToPos(int childID, double radius, double &x, double &y, double &z);
+	void Partition(OctTreeLeafNode **b, const int n, int *partitionSize,
+			OctTreeLeafNode **partition0, OctTreeLeafNode **partition1,
+			OctTreeLeafNode **partition2, OctTreeLeafNode **partition3,
+			OctTreeLeafNode **partition4, OctTreeLeafNode **partition5,
+			OctTreeLeafNode **partition6, OctTreeLeafNode **partition7); 
+	void InsertChildren(double r, int *partitionSize, OctTreeLeafNode
+			**partition0, OctTreeLeafNode **partition1, OctTreeLeafNode
+			**partition2, OctTreeLeafNode **partition3, OctTreeLeafNode
+			**partition4, OctTreeLeafNode **partition5, OctTreeLeafNode
+			**partition6, OctTreeLeafNode **partition7); 
 };
 
 class OctTreeLeafNode: public OctTreeNode { // the tree leaves are the bodies
@@ -152,8 +175,16 @@ OctTreeInternalNode *OctTreeInternalNode::NewNode(const double px, const double 
 	in->posx = px;
 	in->posy = py;
 	in->posz = pz;
-	for (int i = 0; i < 8; i++)
-		in->child[i] = NULL;
+	//for (int i = 0; i < 8; i++)
+	//	in->child[i] = NULL;
+	in->child0 = NULL;
+	in->child1 = NULL;
+	in->child2 = NULL;
+	in->child3 = NULL;
+	in->child4 = NULL;
+	in->child5 = NULL;
+	in->child6 = NULL;
+	in->child7 = NULL;
 
 	return in;
 }
@@ -193,6 +224,41 @@ void OctTreeInternalNode::ChildIDToPos(int childID, double radius, double &x, do
 	}
 }
 
+OctTreeNode** OctTreeInternalNode::GetChildRef(int i) {
+	OctTreeNode** childi = 0;
+	switch (i) {
+		case 0:
+			childi = &child0;
+			break;
+		case 1:
+			childi = &child1;
+			break;
+		case 2:
+			childi = &child2;
+			break;
+		case 3:
+			childi = &child3;
+			break;
+		case 4:
+			childi = &child4;
+			break;
+		case 5:
+			childi = &child5;
+			break;
+		case 6:
+			childi = &child6;
+			break;
+		case 7:
+			childi = &child7;
+			break;
+	}
+	return childi;
+}
+
+OctTreeNode* OctTreeInternalNode::GetChild(int i) {
+	return *GetChildRef(i);
+}
+
 void OctTreeInternalNode::Insert(OctTreeLeafNode * const b, const double r) // builds the tree
 {
 #ifdef DEBUG
@@ -214,17 +280,155 @@ void OctTreeInternalNode::Insert(OctTreeLeafNode * const b, const double r) // b
 		z = r;
 	}
 
-	if (child[i] == NULL) {
-		child[i] = b;
-	} else if (child[i]->type == CELL) {
-		((OctTreeInternalNode *) (child[i]))->Insert(b, 0.5 * r);
+	if (GetChild(i) == NULL) {
+		*GetChildRef(i) = b;
+	} else if (GetChild(i)->type == CELL) {
+		((OctTreeInternalNode *) (GetChild(i)))->Insert(b, 0.5 * r);
 	} else {
 		const double rh = 0.5 * r;
 		OctTreeInternalNode * const cell = NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
 		cell->Insert(b, rh);
-		cell->Insert((OctTreeLeafNode *) (child[i]), rh);
-		child[i] = cell;
+		cell->Insert((OctTreeLeafNode *) (GetChild(i)), rh);
+		*GetChildRef(i) = cell;
 	}
+}
+
+//void OctTreeInternalNode::InsertAll(OctTreeLeafNode ** const b, const int n, const double r)
+//{
+//#ifdef DEBUG
+//	cout << "InsertAll(*this = " << *this << ", n = " << n << ", r = " << r << ")" << endl;
+//#endif
+//	if (n == 0) {
+//		return;
+//	}
+//	OctTreeLeafNode ***partition = new OctTreeLeafNode**[8];
+//	int partitionSize[8];
+//	for (int i = 0; i < 8; ++i) {
+//		partition[i] = new OctTreeLeafNode*[n];
+//		partitionSize[i] = 0;
+//	}
+//	for (int i = 0; i < n; ++i) {
+//		int partitionID = ChildID(b[i]);
+//		partition[partitionID][partitionSize[partitionID]] = b[i];
+//		++partitionSize[partitionID];
+//	}
+//	// https://software.intel.com/en-us/node/506118
+//	tbb::task_group g;
+//	for (int i = 0; i < 8; ++i) {
+//		if (partitionSize[i] > 1) {
+//			double x, y, z;
+//			ChildIDToPos(i, r, x, y, z);
+//			const double rh = 0.5 * r;
+//			OctTreeInternalNode * const cell = NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
+//			child[i] = cell;
+//			//cell->InsertAll(partition[i], partitionSize[i], rh);
+//			g.run([=]{cell->InsertAll(partition[i], partitionSize[i], rh);});
+//		} else if (partitionSize[i] == 1) {
+//			child[i] = partition[i][0];
+//		}
+//	}
+//	g.wait();
+//	for (int i = 0; i < 8; ++i) {
+//		delete partition[i];
+//	}
+//	delete partition;
+//}
+
+OctTreeLeafNode ***OctTreeInternalNode::GetPartitionRef(int i, OctTreeLeafNode
+		**partition0, OctTreeLeafNode **partition1, OctTreeLeafNode
+		**partition2, OctTreeLeafNode **partition3, OctTreeLeafNode
+		**partition4, OctTreeLeafNode **partition5, OctTreeLeafNode
+		**partition6, OctTreeLeafNode **partition7) {
+	OctTreeLeafNode ***partitioni = 0;
+	switch (i) {
+		case 0:
+			partitioni = &partition0;
+			break;
+		case 1:
+			partitioni = &partition1;
+			break;
+		case 2:
+			partitioni = &partition2;
+			break;
+		case 3:
+			partitioni = &partition3;
+			break;
+		case 4:
+			partitioni = &partition4;
+			break;
+		case 5:
+			partitioni = &partition5;
+			break;
+		case 6:
+			partitioni = &partition6;
+			break;
+		case 7:
+			partitioni = &partition7;
+			break;
+	}
+	return partitioni;
+}
+
+OctTreeLeafNode **OctTreeInternalNode::GetPartition(int i, OctTreeLeafNode **partition0,
+		OctTreeLeafNode **partition1, OctTreeLeafNode **partition2,
+		OctTreeLeafNode **partition3, OctTreeLeafNode **partition4,
+		OctTreeLeafNode **partition5, OctTreeLeafNode **partition6,
+		OctTreeLeafNode **partition7) {
+	return *GetPartitionRef(i, partition0, partition1, partition2,
+			partition3, partition4, partition5, partition6,
+			partition7);
+}
+
+void OctTreeInternalNode::Partition(OctTreeLeafNode **b, const int n, int
+		*partitionSize, OctTreeLeafNode **partition0, OctTreeLeafNode
+		**partition1, OctTreeLeafNode **partition2, OctTreeLeafNode
+		**partition3, OctTreeLeafNode **partition4, OctTreeLeafNode
+		**partition5, OctTreeLeafNode **partition6, OctTreeLeafNode
+		**partition7) {
+	for (int i = 0; i < 8; ++i) {
+		//partition[i] = new OctTreeLeafNode*[n];
+		partitionSize[i] = 0;
+	}
+	for (int i = 0; i < n; ++i) {
+		int partitionID = ChildID(b[i]);
+		//partition[partitionID][partitionSize[partitionID]] = b[i];
+		OctTreeLeafNode **partitioni = GetPartition(partitionID,
+				partition0, partition1, partition2, partition3,
+				partition4, partition5, partition6, partition7);
+		partitioni[partitionSize[partitionID]] = b[i];
+		++partitionSize[partitionID];
+	}
+}
+
+
+void OctTreeInternalNode::InsertChildren(double r, int *partitionSize, OctTreeLeafNode
+		**partition0, OctTreeLeafNode **partition1, OctTreeLeafNode
+		**partition2, OctTreeLeafNode **partition3, OctTreeLeafNode
+		**partition4, OctTreeLeafNode **partition5, OctTreeLeafNode
+		**partition6, OctTreeLeafNode **partition7) {
+	// https://software.intel.com/en-us/node/506118
+	tbb::task_group g;
+	for (int i = 0; i < 8; ++i) {
+		OctTreeLeafNode **partitioni = GetPartition(i, partition0,
+				partition1, partition2, partition3, partition4,
+				partition5, partition6, partition7);
+		OctTreeNode **childi = GetChildRef(i);
+		if (partitionSize[i] > 1) {
+			double x, y, z;
+			ChildIDToPos(i, r, x, y, z);
+			const double rh = 0.5 * r;
+			OctTreeInternalNode * const cell = NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
+			*childi = cell;
+			//child[i] = cell;
+			//cell->InsertAll(partition[i], partitionSize[i], rh);
+			//g.run([=]{cell->InsertAll(partition[i], partitionSize[i], rh);});
+			g.run([=]{cell->InsertAll(partitioni, partitionSize[i], rh);});
+		} else if (partitionSize[i] == 1) {
+			//child[i] = partition[i][0];
+			*childi = partitioni[0];
+		}
+	}
+	g.wait();
 }
 
 void OctTreeInternalNode::InsertAll(OctTreeLeafNode ** const b, const int n, const double r)
@@ -235,37 +439,33 @@ void OctTreeInternalNode::InsertAll(OctTreeLeafNode ** const b, const int n, con
 	if (n == 0) {
 		return;
 	}
-	OctTreeLeafNode ***partition = new OctTreeLeafNode**[8];
+	//OctTreeLeafNode **partition = new OctTreeLeafNode**[8];
+	OctTreeLeafNode **partition0, **partition1, **partition2, **partition3,
+			**partition4, **partition5, **partition6, **partition7;
 	int partitionSize[8];
+	partition0 = new OctTreeLeafNode*[n];
+	partition1 = new OctTreeLeafNode*[n];
+	partition2 = new OctTreeLeafNode*[n];
+	partition3 = new OctTreeLeafNode*[n];
+	partition4 = new OctTreeLeafNode*[n];
+	partition5 = new OctTreeLeafNode*[n];
+	partition6 = new OctTreeLeafNode*[n];
+	partition7 = new OctTreeLeafNode*[n];
+	Partition(b, n, partitionSize, partition0, partition1, partition2,
+			partition3, partition4, partition5, partition6,
+			partition7);
+	InsertChildren(r, partitionSize, partition0, partition1, partition2,
+			partition3, partition4, partition5, partition6,
+			partition7);
+	//for (int i = 0; i < 8; ++i) {
+	//	delete partition[i];
+	//}
+	//delete partition;
 	for (int i = 0; i < 8; ++i) {
-		partition[i] = new OctTreeLeafNode*[n];
-		partitionSize[i] = 0;
+		delete GetPartition(i, partition0, partition1, partition2,
+				partition3, partition4, partition5, partition6,
+				partition7);
 	}
-	for (int i = 0; i < n; ++i) {
-		int partitionID = ChildID(b[i]);
-		partition[partitionID][partitionSize[partitionID]] = b[i];
-		++partitionSize[partitionID];
-	}
-	// https://software.intel.com/en-us/node/506118
-	tbb::task_group g;
-	for (int i = 0; i < 8; ++i) {
-		if (partitionSize[i] > 1) {
-			double x, y, z;
-			ChildIDToPos(i, r, x, y, z);
-			const double rh = 0.5 * r;
-			OctTreeInternalNode * const cell = NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
-			child[i] = cell;
-			//cell->InsertAll(partition[i], partitionSize[i], rh);
-			g.run([=]{cell->InsertAll(partition[i], partitionSize[i], rh);});
-		} else if (partitionSize[i] == 1) {
-			child[i] = partition[i][0];
-		}
-	}
-	g.wait();
-	for (int i = 0; i < 8; ++i) {
-		delete partition[i];
-	}
-	delete partition;
 }
 
 void OctTreeInternalNode::ComputeCenterOfMass(int &curr) // recursively summarizes info about subtrees
@@ -276,10 +476,13 @@ void OctTreeInternalNode::ComputeCenterOfMass(int &curr) // recursively summariz
 	int j = 0;
 	mass = 0.0;
 	for (int i = 0; i < 8; i++) {
-		ch = child[i];
+		//ch = child[i];
+		ch = *GetChildRef(i);
 		if (ch != NULL) {
-			child[i] = NULL; // move non-NULL children to the front (needed to make other code faster)
-			child[j++] = ch;
+			//child[i] = NULL; // move non-NULL children to the front (needed to make other code faster)
+			//child[j++] = ch;
+			*GetChildRef(i) = NULL; // move non-NULL children to the front (needed to make other code faster)
+			*GetChildRef(j++) = ch;
 
 			if (ch->type == BODY) {
 				bodies[curr++] = (OctTreeLeafNode *) ch; // sort bodies in tree order (approximation of putting nearby nodes together for locality)
@@ -369,22 +572,22 @@ void OctTreeLeafNode::RecurseForce(const OctTreeNode * const n, double dsq) // r
 		if (n->type == CELL) {
 			OctTreeInternalNode *in = (OctTreeInternalNode *) n;
 			dsq *= 0.25;
-			if (in->child[0] != NULL) {
-				RecurseForce(in->child[0], dsq);
-				if (in->child[1] != NULL) {
-					RecurseForce(in->child[1], dsq);
-					if (in->child[2] != NULL) {
-						RecurseForce(in->child[2], dsq);
-						if (in->child[3] != NULL) {
-							RecurseForce(in->child[3], dsq);
-							if (in->child[4] != NULL) {
-								RecurseForce(in->child[4], dsq);
-								if (in->child[5] != NULL) {
-									RecurseForce(in->child[5], dsq);
-									if (in->child[6] != NULL) {
-										RecurseForce(in->child[6], dsq);
-										if (in->child[7] != NULL) {
-											RecurseForce(in->child[7], dsq);
+			if (in->GetChild(0) != NULL) {
+				RecurseForce(in->GetChild(0), dsq);
+				if (in->GetChild(1) != NULL) {
+					RecurseForce(in->GetChild(1), dsq);
+					if (in->GetChild(2) != NULL) {
+						RecurseForce(in->GetChild(2), dsq);
+						if (in->GetChild(3) != NULL) {
+							RecurseForce(in->GetChild(3), dsq);
+							if (in->GetChild(4) != NULL) {
+								RecurseForce(in->GetChild(4), dsq);
+								if (in->GetChild(5) != NULL) {
+									RecurseForce(in->GetChild(5), dsq);
+									if (in->GetChild(6) != NULL) {
+										RecurseForce(in->GetChild(6), dsq);
+										if (in->GetChild(7) != NULL) {
+											RecurseForce(in->GetChild(7), dsq);
 										}
 									}
 								}
