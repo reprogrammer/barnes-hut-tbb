@@ -1,30 +1,46 @@
-CC=gcc
-#CXX=g++
-CXX=clang++
+CPP      := clang++
+CPPFLAGS += -DASAP_INFER_EFFECTS
+CPPFLAGS += $(CXXFLAGS) -std=c++11 #-stdlib=libc++
+CHECKER  := $(CPP) --analyze -Xclang -analyzer-checker=alpha.SafeParallelismChecker -Xclang -analyzer-config -Xclang -asap-default-scheme=parametric-effect-inference
+CHECKERFLAGS += $(CPPFLAGS)
+LD       := clang++
+LIBS     += -ltbb
+INCLUDES := 
 
-COMMON=-g -O0 -Wall
-LDFLAGS=-ltbb #-v
+# Remove these files when doing clean
+OUTPUT +=
 
-CFLAGS = $(COMMON)
-CXXFLAGS = $(COMMON) -std=c++11 #-stdlib=libc++ -fsanitize=address 
+CPPFLAGS += 
 
-# Modify for your platform
-TBB21_INSTALL_DIR=/opt/intel/tbb/2.1
-TBB_ARCH_PLATFORM=em64t/cc4.1.0_libc2.4_kernel2.6.16.21
+PROG := driver/BarnesHut
 
-all: BarnesHut
+ONEFILE := driver/BarnesHut.cc
 
-install: BarnesHut
-	cp src/BarnesHut driver
+SRCS += src/BarnesHut.cpp
 
-BarnesHut: src/BarnesHut.cpp
-	# To fix the load path into the executable (ELF header) so that we don't need to set the LD_LIBRARY_PATH at runtime
-	# LD_RUN_PATH only works on Linux. On OS X we need something else .... 
-	# To check if the path is embedded properly, run 'readelf -d' on the executable and look for the rpath setting 
-	# LD_RUN_PATH=$(TBB21_INSTALL_DIR)/$(TBB_ARCH_PLATFORM)/lib $(CXX) $(CXXFLAGS) -I$(TBB21_INSTALL_DIR)/include -L$(TBB21_INSTALL_DIR)/$(TBB_ARCH_PLATFORM)/lib $(LDFLAGS) src/BarnesHut.cpp -o BarnesHut 
+# This order must support concatenating all the headers as one file with includes removed.
+HEADERS = asap.h
 
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) src/BarnesHut.cpp -o BarnesHut 
-	mv BarnesHut src
+OBJS := ${SRCS:.cpp=.o}
 
+
+.PHONY: default
+default: $(PROG)
+
+.PHONY: clean
 clean:
-	rm -f driver/BarnesHut src/BarnesHut
+	$(RM) $(OBJS) $(PROG) $(OUTPUT) $(ONEFILE)
+
+.PHONY: check
+check: $(ONEFILE)
+	$(CHECKER) $(CHECKERFLAGS) $(INCLUDES) $(ONEFILE)
+
+$(PROG): $(OBJS)
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $(PROG)
+
+driver/%.o: src/%.cpp src/*.h
+	$(CPP) $(CPPFLAGS) $(INCLUDES) -c $< -o $@
+
+$(ONEFILE): src/*.cpp src/*.h
+	cat $(HEADERS) $(SRCS) |egrep -v "include \"[^.]" > $(ONEFILE)
+
