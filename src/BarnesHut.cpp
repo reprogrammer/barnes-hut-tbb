@@ -33,10 +33,14 @@
 #include <sys/time.h>
 #include <iostream>
 
-#include "tbb/task_scheduler_init.h"
 #include "tbb/blocked_range.h"
 #include "tbb/parallel_for.h"
-#include "tbb/task_group.h"
+#include "tbb/parallel_invoke.h"
+//#include "../include/blocked_range.h"
+//#include "../include/parallel_for.h"
+//#include "../include/parallel_invoke.h"
+//#include "tbb/task_scheduler_init.h"
+//#include "tbb/task_group.h"
 
 static double dtime; // length of one time step
 static double eps; // potential softening parameter
@@ -98,6 +102,7 @@ public:
 			OctTreeLeafNode **partition3, OctTreeLeafNode **partition4,
 			OctTreeLeafNode **partition5, OctTreeLeafNode **partition6,
 			OctTreeLeafNode **partition7);
+	static void ChildIDToPos(int childID, double radius, double &x, double &y, double &z);
 	//OctTreeNode *child[8];
 	OctTreeNode *child0, *child1, *child2, *child3, *child4, *child5,
 		    *child6, *child7;
@@ -107,7 +112,6 @@ private:
 	static OctTreeInternalNode *head, *freelist; // free list for recycling
 
 	int ChildID(OctTreeLeafNode * const b);
-	void ChildIDToPos(int childID, double radius, double &x, double &y, double &z);
 	void Partition(OctTreeLeafNode **b, const int n, int *partitionSize,
 			OctTreeLeafNode **partition0, OctTreeLeafNode **partition1,
 			OctTreeLeafNode **partition2, OctTreeLeafNode **partition3,
@@ -400,36 +404,76 @@ void OctTreeInternalNode::Partition(OctTreeLeafNode **b, const int n, int
 	}
 }
 
+class ChildrenInserter {
+private:
+	double r, posx, posy, posz;
+	int childID;
+	OctTreeLeafNode **partition;
+	int partitionSize;
+	OctTreeNode **child;
+
+public:
+	ChildrenInserter(double r, double posx, double posy, double posz, int childID, OctTreeLeafNode **partition, int partitionSize, OctTreeNode **child): r(r), posx(posx), posy(posy), posz(posz), childID(childID), partition(partition), partitionSize(partitionSize), child(child) {}
+
+	void operator()() const {
+		if (partitionSize > 1) {
+			double x, y, z;
+			OctTreeInternalNode::ChildIDToPos(childID, r, x, y, z);
+			double rh = 0.5 * r;
+			OctTreeInternalNode *cell = OctTreeInternalNode::NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
+			*child = cell;
+			cell->InsertAll(partition, partitionSize, rh);
+		} else if (partitionSize == 1) {
+			*child = partition[0];
+		}
+	}
+};
 
 void OctTreeInternalNode::InsertChildren(double r, int *partitionSize, OctTreeLeafNode
 		**partition0, OctTreeLeafNode **partition1, OctTreeLeafNode
 		**partition2, OctTreeLeafNode **partition3, OctTreeLeafNode
 		**partition4, OctTreeLeafNode **partition5, OctTreeLeafNode
 		**partition6, OctTreeLeafNode **partition7) {
-	// https://software.intel.com/en-us/node/506118
-	tbb::task_group g;
-	for (int i = 0; i < 8; ++i) {
-		OctTreeLeafNode **partitioni = GetPartition(i, partition0,
-				partition1, partition2, partition3, partition4,
-				partition5, partition6, partition7);
-		OctTreeNode **childi = GetChildRef(i);
-		if (partitionSize[i] > 1) {
-			double x, y, z;
-			ChildIDToPos(i, r, x, y, z);
-			const double rh = 0.5 * r;
-			OctTreeInternalNode * const cell = NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
-			*childi = cell;
-			//child[i] = cell;
-			//cell->InsertAll(partition[i], partitionSize[i], rh);
-			//g.run([=]{cell->InsertAll(partition[i], partitionSize[i], rh);});
-			g.run([=]{cell->InsertAll(partitioni, partitionSize[i], rh);});
-		} else if (partitionSize[i] == 1) {
-			//child[i] = partition[i][0];
-			*childi = partitioni[0];
-		}
-	}
-	g.wait();
+	ChildrenInserter inserter0 = ChildrenInserter(r, posx, posy, posz, 0, partition0, partitionSize[0], GetChildRef(0));
+	ChildrenInserter inserter1 = ChildrenInserter(r, posx, posy, posz, 1, partition1, partitionSize[1], GetChildRef(1));
+	ChildrenInserter inserter2 = ChildrenInserter(r, posx, posy, posz, 2, partition2, partitionSize[2], GetChildRef(2));
+	ChildrenInserter inserter3 = ChildrenInserter(r, posx, posy, posz, 3, partition3, partitionSize[3], GetChildRef(3));
+	ChildrenInserter inserter4 = ChildrenInserter(r, posx, posy, posz, 4, partition4, partitionSize[4], GetChildRef(4));
+	ChildrenInserter inserter5 = ChildrenInserter(r, posx, posy, posz, 5, partition5, partitionSize[5], GetChildRef(5));
+	ChildrenInserter inserter6 = ChildrenInserter(r, posx, posy, posz, 6, partition6, partitionSize[6], GetChildRef(6));
+	ChildrenInserter inserter7 = ChildrenInserter(r, posx, posy, posz, 7, partition7, partitionSize[7], GetChildRef(7));
+	parallel_invoke(inserter0, inserter1, inserter2, inserter3, inserter4, inserter5, inserter6, inserter7);
 }
+
+//void OctTreeInternalNode::InsertChildren(double r, int *partitionSize, OctTreeLeafNode
+//		**partition0, OctTreeLeafNode **partition1, OctTreeLeafNode
+//		**partition2, OctTreeLeafNode **partition3, OctTreeLeafNode
+//		**partition4, OctTreeLeafNode **partition5, OctTreeLeafNode
+//		**partition6, OctTreeLeafNode **partition7) {
+//	// https://software.intel.com/en-us/node/506118
+//	tbb::task_group g;
+//	for (int i = 0; i < 8; ++i) {
+//		OctTreeLeafNode **partitioni = GetPartition(i, partition0,
+//				partition1, partition2, partition3, partition4,
+//				partition5, partition6, partition7);
+//		OctTreeNode **childi = GetChildRef(i);
+//		if (partitionSize[i] > 1) {
+//			double x, y, z;
+//			ChildIDToPos(i, r, x, y, z);
+//			const double rh = 0.5 * r;
+//			OctTreeInternalNode * const cell = NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
+//			*childi = cell;
+//			//child[i] = cell;
+//			//cell->InsertAll(partition[i], partitionSize[i], rh);
+//			//g.run([=]{cell->InsertAll(partition[i], partitionSize[i], rh);});
+//			g.run([=]{cell->InsertAll(partitioni, partitionSize[i], rh);});
+//		} else if (partitionSize[i] == 1) {
+//			//child[i] = partition[i][0];
+//			*childi = partitioni[0];
+//		}
+//	}
+//	g.wait();
+//}
 
 void OctTreeInternalNode::InsertAll(OctTreeLeafNode ** const b, const int n, const double r)
 {
@@ -752,7 +796,7 @@ public:
 };
 
 int main(int argc, char *argv[]) {
-	task_scheduler_init init;
+	//task_scheduler_init init;
 	ParallelForProcessor parallelProcessor;
 
 	fprintf(stderr, "\n");
