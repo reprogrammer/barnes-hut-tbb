@@ -33,14 +33,17 @@
 #include <sys/time.h>
 #include <iostream>
 
-#include "tbb/blocked_range.h"
-#include "tbb/parallel_for.h"
-#include "tbb/parallel_invoke.h"
-//#include "../include/blocked_range.h"
-//#include "../include/parallel_for.h"
-//#include "../include/parallel_invoke.h"
+//#include "tbb/blocked_range.h"
+//#include "tbb/parallel_for.h"
+//#include "tbb/parallel_invoke.h"
+#include "asap.h"
+#include "../include/blocked_range.h"
+#include "../include/parallel_for.h"
+#include "../include/parallel_invoke.h"
+
 //#include "tbb/task_scheduler_init.h"
 //#include "tbb/task_group.h"
+#line 47 "BarnesHut.cpp"
 
 static double dtime; // length of one time step
 static double eps; // potential softening parameter
@@ -92,18 +95,12 @@ public:
 	void ComputeCenterOfMass(int &curr); // recursively summarizes info about subtrees
 	OctTreeNode** GetChildRef(int i);
 	OctTreeNode* GetChild(int i);
-	OctTreeLeafNode ***GetPartitionRef(int i, OctTreeLeafNode **partition0,
-			OctTreeLeafNode **partition1, OctTreeLeafNode **partition2,
-			OctTreeLeafNode **partition3, OctTreeLeafNode **partition4,
-			OctTreeLeafNode **partition5, OctTreeLeafNode **partition6,
-			OctTreeLeafNode **partition7);
 	OctTreeLeafNode **GetPartition(int i, OctTreeLeafNode **partition0,
 			OctTreeLeafNode **partition1, OctTreeLeafNode **partition2,
 			OctTreeLeafNode **partition3, OctTreeLeafNode **partition4,
 			OctTreeLeafNode **partition5, OctTreeLeafNode **partition6,
 			OctTreeLeafNode **partition7);
 	static void ChildIDToPos(int childID, double radius, double &x, double &y, double &z);
-	//OctTreeNode *child[8];
 	OctTreeNode *child0, *child1, *child2, *child3, *child4, *child5,
 		    *child6, *child7;
 
@@ -297,90 +294,39 @@ void OctTreeInternalNode::Insert(OctTreeLeafNode * const b, const double r) // b
 	}
 }
 
-//void OctTreeInternalNode::InsertAll(OctTreeLeafNode ** const b, const int n, const double r)
-//{
-//#ifdef DEBUG
-//	cout << "InsertAll(*this = " << *this << ", n = " << n << ", r = " << r << ")" << endl;
-//#endif
-//	if (n == 0) {
-//		return;
-//	}
-//	OctTreeLeafNode ***partition = new OctTreeLeafNode**[8];
-//	int partitionSize[8];
-//	for (int i = 0; i < 8; ++i) {
-//		partition[i] = new OctTreeLeafNode*[n];
-//		partitionSize[i] = 0;
-//	}
-//	for (int i = 0; i < n; ++i) {
-//		int partitionID = ChildID(b[i]);
-//		partition[partitionID][partitionSize[partitionID]] = b[i];
-//		++partitionSize[partitionID];
-//	}
-//	// https://software.intel.com/en-us/node/506118
-//	tbb::task_group g;
-//	for (int i = 0; i < 8; ++i) {
-//		if (partitionSize[i] > 1) {
-//			double x, y, z;
-//			ChildIDToPos(i, r, x, y, z);
-//			const double rh = 0.5 * r;
-//			OctTreeInternalNode * const cell = NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
-//			child[i] = cell;
-//			//cell->InsertAll(partition[i], partitionSize[i], rh);
-//			g.run([=]{cell->InsertAll(partition[i], partitionSize[i], rh);});
-//		} else if (partitionSize[i] == 1) {
-//			child[i] = partition[i][0];
-//		}
-//	}
-//	g.wait();
-//	for (int i = 0; i < 8; ++i) {
-//		delete partition[i];
-//	}
-//	delete partition;
-//}
-
-OctTreeLeafNode ***OctTreeInternalNode::GetPartitionRef(int i, OctTreeLeafNode
-		**partition0, OctTreeLeafNode **partition1, OctTreeLeafNode
-		**partition2, OctTreeLeafNode **partition3, OctTreeLeafNode
-		**partition4, OctTreeLeafNode **partition5, OctTreeLeafNode
-		**partition6, OctTreeLeafNode **partition7) {
-	OctTreeLeafNode ***partitioni = 0;
-	switch (i) {
-		case 0:
-			partitioni = &partition0;
-			break;
-		case 1:
-			partitioni = &partition1;
-			break;
-		case 2:
-			partitioni = &partition2;
-			break;
-		case 3:
-			partitioni = &partition3;
-			break;
-		case 4:
-			partitioni = &partition4;
-			break;
-		case 5:
-			partitioni = &partition5;
-			break;
-		case 6:
-			partitioni = &partition6;
-			break;
-		case 7:
-			partitioni = &partition7;
-			break;
-	}
-	return partitioni;
-}
-
 OctTreeLeafNode **OctTreeInternalNode::GetPartition(int i, OctTreeLeafNode **partition0,
 		OctTreeLeafNode **partition1, OctTreeLeafNode **partition2,
 		OctTreeLeafNode **partition3, OctTreeLeafNode **partition4,
 		OctTreeLeafNode **partition5, OctTreeLeafNode **partition6,
 		OctTreeLeafNode **partition7) {
-	return *GetPartitionRef(i, partition0, partition1, partition2,
-			partition3, partition4, partition5, partition6,
-			partition7);
+	OctTreeLeafNode **partitioni = 0;
+	switch (i) {
+		case 0:
+			partitioni = partition0;
+			break;
+		case 1:
+			partitioni = partition1;
+			break;
+		case 2:
+			partitioni = partition2;
+			break;
+		case 3:
+			partitioni = partition3;
+			break;
+		case 4:
+			partitioni = partition4;
+			break;
+		case 5:
+			partitioni = partition5;
+			break;
+		case 6:
+			partitioni = partition6;
+			break;
+		case 7:
+			partitioni = partition7;
+			break;
+	}
+	return partitioni;
 }
 
 void OctTreeInternalNode::Partition(OctTreeLeafNode **b, const int n, int
@@ -390,12 +336,10 @@ void OctTreeInternalNode::Partition(OctTreeLeafNode **b, const int n, int
 		**partition5, OctTreeLeafNode **partition6, OctTreeLeafNode
 		**partition7) {
 	for (int i = 0; i < 8; ++i) {
-		//partition[i] = new OctTreeLeafNode*[n];
 		partitionSize[i] = 0;
 	}
 	for (int i = 0; i < n; ++i) {
 		int partitionID = ChildID(b[i]);
-		//partition[partitionID][partitionSize[partitionID]] = b[i];
 		OctTreeLeafNode **partitioni = GetPartition(partitionID,
 				partition0, partition1, partition2, partition3,
 				partition4, partition5, partition6, partition7);
@@ -445,36 +389,6 @@ void OctTreeInternalNode::InsertChildren(double r, int *partitionSize, OctTreeLe
 	parallel_invoke(inserter0, inserter1, inserter2, inserter3, inserter4, inserter5, inserter6, inserter7);
 }
 
-//void OctTreeInternalNode::InsertChildren(double r, int *partitionSize, OctTreeLeafNode
-//		**partition0, OctTreeLeafNode **partition1, OctTreeLeafNode
-//		**partition2, OctTreeLeafNode **partition3, OctTreeLeafNode
-//		**partition4, OctTreeLeafNode **partition5, OctTreeLeafNode
-//		**partition6, OctTreeLeafNode **partition7) {
-//	// https://software.intel.com/en-us/node/506118
-//	tbb::task_group g;
-//	for (int i = 0; i < 8; ++i) {
-//		OctTreeLeafNode **partitioni = GetPartition(i, partition0,
-//				partition1, partition2, partition3, partition4,
-//				partition5, partition6, partition7);
-//		OctTreeNode **childi = GetChildRef(i);
-//		if (partitionSize[i] > 1) {
-//			double x, y, z;
-//			ChildIDToPos(i, r, x, y, z);
-//			const double rh = 0.5 * r;
-//			OctTreeInternalNode * const cell = NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
-//			*childi = cell;
-//			//child[i] = cell;
-//			//cell->InsertAll(partition[i], partitionSize[i], rh);
-//			//g.run([=]{cell->InsertAll(partition[i], partitionSize[i], rh);});
-//			g.run([=]{cell->InsertAll(partitioni, partitionSize[i], rh);});
-//		} else if (partitionSize[i] == 1) {
-//			//child[i] = partition[i][0];
-//			*childi = partitioni[0];
-//		}
-//	}
-//	g.wait();
-//}
-
 void OctTreeInternalNode::InsertAll(OctTreeLeafNode ** const b, const int n, const double r)
 {
 #ifdef DEBUG
@@ -506,7 +420,7 @@ void OctTreeInternalNode::InsertAll(OctTreeLeafNode ** const b, const int n, con
 	//}
 	//delete partition;
 	for (int i = 0; i < 8; ++i) {
-		delete GetPartition(i, partition0, partition1, partition2,
+		delete [] GetPartition(i, partition0, partition1, partition2,
 				partition3, partition4, partition5, partition6,
 				partition7);
 	}

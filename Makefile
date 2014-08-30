@@ -19,7 +19,7 @@ ONEFILE := driver/BarnesHut.cc
 SRCS += src/BarnesHut.cpp
 
 # This order must support concatenating all the headers as one file with includes removed.
-HEADERS = asap.h
+HEADERS = src/asap.h
 
 OBJS := ${SRCS:.cpp=.o}
 
