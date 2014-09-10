@@ -10,8 +10,15 @@
 #	define WRITES(...)
 #endif
 
-#define ARG(...) [[asap::arg(#__VA_ARGS__)]]
+#ifndef ASAP_INFER_ARGS
+#   define ARG(...) [[asap::arg(#__VA_ARGS__)]]
+#   define REGION(...) [[asap::region(#__VA_ARGS__)]]
+#else
+#   define ARG(...)
+#   define REGION(...)
+#endif
+
 #define PARAM(...) [[asap::param(#__VA_ARGS__)]]
-#define REGION(...) [[asap::region(#__VA_ARGS__)]]
+#define ARG_(...) [[asap::arg(#__VA_ARGS__)]]
 
 #endif

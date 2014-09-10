@@ -65,13 +65,13 @@ class OctTreeLeafNode;
 static OctTreeLeafNode **bodies; // the n bodies
 
 
-class OctTreeNode {
+class PARAM(R) OctTreeNode {
 public:
-	int type; // CELL or BODY
-	double mass;
-	double posx;
-	double posy;
-	double posz;
+	int type ARG(R); // CELL or BODY
+	double mass ARG(R);
+	double posx ARG(R);
+	double posy ARG(R);
+	double posz ARG(R);
 #ifdef DEBUG
 	friend std::ostream& operator<<(std::ostream &stream, const OctTreeNode &node);
 #endif
@@ -85,9 +85,10 @@ std::ostream &operator<<(std::ostream &stream, const OctTreeNode &node) {
 }
 #endif
 
-class OctTreeInternalNode: public OctTreeNode { // the internal nodes are cells that summarize their children's properties
+// The internal nodes are cells that summarize their children's properties
+class [[asap::param("R"), asap::base_arg("OctTreeNode", "R")]] OctTreeInternalNode: public OctTreeNode {
 public:
-	static OctTreeInternalNode *NewNode(const double px, const double py, const double pz);
+	static OctTreeInternalNode *NewNode ARG(Global, Global) (const double px, const double py, const double pz);
 
 	static void RecycleTree() {
 		freelist = head;
@@ -95,7 +96,7 @@ public:
 
 public:
 	void Insert(OctTreeLeafNode * const b, const double r); // builds the tree
-	void InsertAll(OctTreeLeafNode ** const b, const int n, const double r);
+	void InsertAll(OctTreeLeafNode **b, int n, double r);
 	void ComputeCenterOfMass(int &curr); // recursively summarizes info about subtrees
 	OctTreeNode** GetChildRef(int i);
 	OctTreeNode* GetChild(int i);
@@ -104,7 +105,7 @@ public:
 			OctTreeLeafNode **partition3, OctTreeLeafNode **partition4,
 			OctTreeLeafNode **partition5, OctTreeLeafNode **partition6,
 			OctTreeLeafNode **partition7);
-	static void ChildIDToPos(int childID, double radius, double &x, double &y, double &z);
+	static void ChildIDToPos(int childID, double radius, double *x, double *y, double *z);
 	OctTreeNode *child0, *child1, *child2, *child3, *child4, *child5,
 		    *child6, *child7;
 
@@ -125,7 +126,8 @@ private:
 			**partition6, OctTreeLeafNode **partition7); 
 };
 
-class OctTreeLeafNode: public OctTreeNode { // the tree leaves are the bodies
+// the tree leaves are the bodies
+class [[asap::param("R"), asap::base_arg("OctTreeNode", "R")]] OctTreeLeafNode: public OctTreeNode {
 public:
 	OctTreeLeafNode();
 	~OctTreeLeafNode() {
@@ -157,11 +159,11 @@ private:
 OctTreeInternalNode *OctTreeInternalNode::head = 0;
 OctTreeInternalNode *OctTreeInternalNode::freelist = 0;
 
-OctTreeInternalNode *OctTreeInternalNode::NewNode(const double px, const double py, const double pz) {
+OctTreeInternalNode * OctTreeInternalNode::NewNode ARG(Global, Global) (const double px, const double py, const double pz) {
 #ifdef DEBUG
 	cout << "NewNode(px = " << px << ", py = " << py << ", pz = " << pz << ")" << endl;
 #endif
-	OctTreeInternalNode *in;
+	OctTreeInternalNode *in ARG(Local, Global);
 
 	in = new OctTreeInternalNode();
 	//Accesses to freelist should be atomic when NewNode is called
@@ -213,18 +215,18 @@ int OctTreeInternalNode::ChildID(OctTreeLeafNode * const b)
 	return i;
 }
 
-void OctTreeInternalNode::ChildIDToPos(int childID, double radius, double &x, double &y, double &z) {
-	x = y = z = 0;
+void OctTreeInternalNode::ChildIDToPos(int childID, double radius, double *x, double *y, double *z) {
+	*x = *y = *z = 0;
 	if (childID >= 4) {
-		z = radius;
+		*z = radius;
 		childID -= 4;
 	}
 	if (childID >= 2) {
-		y = radius;
+		*y = radius;
 		childID -= 2;
 	}
 	if (childID >= 1) {
-		x = radius;
+		*x = radius;
 		childID -= 1;
 	}
 }
@@ -352,21 +354,24 @@ void OctTreeInternalNode::Partition(OctTreeLeafNode **b, const int n, int
 	}
 }
 
-class ChildrenInserter {
+class PARAM(Rpartition) ChildrenInserter {
 private:
-	double r, posx, posy, posz;
-	int childID;
-	OctTreeLeafNode **partition;
-	int partitionSize;
-	OctTreeNode **child;
+	double r ARG(Rpartition);
+	double posx ARG(Rpartition);
+	double posy ARG(Rpartition);
+	double posz ARG(Rpartition);
+	int childID ARG(Rpartition);
+	OctTreeLeafNode **partition ARG(Rpartition, Rpartition, Rpartition);
+	int partitionSize ARG(Rpartition);
+	OctTreeNode **child ARG(Rpartition, Rpartition, Rpartition);
 
 public:
-	ChildrenInserter(double r, double posx, double posy, double posz, int childID, OctTreeLeafNode **partition, int partitionSize, OctTreeNode **child): r(r), posx(posx), posy(posy), posz(posz), childID(childID), partition(partition), partitionSize(partitionSize), child(child) {}
+	ChildrenInserter (double r, double posx, double posy, double posz, int childID, OctTreeLeafNode **partition ARG(Rpartition, Rpartition), int partitionSize, OctTreeNode **child ARG(Rpartition, Rpartition)): r(r), posx(posx), posy(posy), posz(posz), childID(childID), partition(partition), partitionSize(partitionSize), child(child) {}
 
 	void operator()() const {
 		if (partitionSize > 1) {
 			double x, y, z;
-			OctTreeInternalNode::ChildIDToPos(childID, r, x, y, z);
+			OctTreeInternalNode::ChildIDToPos(childID, r, &x, &y, &z);
 			double rh = 0.5 * r;
 			OctTreeInternalNode *cell = OctTreeInternalNode::NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
 			*child = cell;
@@ -393,7 +398,7 @@ void OctTreeInternalNode::InsertChildren(double r, int *partitionSize, OctTreeLe
 	parallel_invoke(inserter0, inserter1, inserter2, inserter3, inserter4, inserter5, inserter6, inserter7);
 }
 
-void OctTreeInternalNode::InsertAll(OctTreeLeafNode ** const b, const int n, const double r)
+void OctTreeInternalNode::InsertAll(OctTreeLeafNode **b, int n, double r)
 {
 #ifdef DEBUG
 	cout << "InsertAll(*this = " << *this << ", n = " << n << ", r = " << r << ")" << endl;
@@ -402,8 +407,14 @@ void OctTreeInternalNode::InsertAll(OctTreeLeafNode ** const b, const int n, con
 		return;
 	}
 	//OctTreeLeafNode **partition = new OctTreeLeafNode**[8];
-	OctTreeLeafNode **partition0, **partition1, **partition2, **partition3,
-			**partition4, **partition5, **partition6, **partition7;
+	OctTreeLeafNode **partition0;
+	OctTreeLeafNode **partition1;
+	OctTreeLeafNode **partition2;
+	OctTreeLeafNode **partition3;
+	OctTreeLeafNode **partition4;
+	OctTreeLeafNode **partition5;
+	OctTreeLeafNode **partition6;
+	OctTreeLeafNode **partition7;
 	int partitionSize[8];
 	partition0 = new OctTreeLeafNode*[n];
 	partition1 = new OctTreeLeafNode*[n];
