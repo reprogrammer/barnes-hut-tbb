@@ -1,3 +1,6 @@
+*.pl
 *.plist
 *.cc
 include
+constraint-stats.txt
+*.o

@@ -27,7 +27,7 @@
 
 //#define DEBUG
 
-#include <cstdlib>
+//#include <cstdlib>
 #include <cstdio>
 #include <cmath>
 #include <sys/time.h>
@@ -72,14 +72,18 @@ public:
 	double posx;
 	double posy;
 	double posz;
+#ifdef DEBUG
 	friend std::ostream& operator<<(std::ostream &stream, const OctTreeNode &node);
+#endif
 };
 
+#ifdef DEBUG
 std::ostream &operator<<(std::ostream &stream, const OctTreeNode &node) {
 	stream << "{posx=" << node.posx << ", posy=" << node.posy << ", posz="
-		<< node.posz << "}" << flush;
+		<< node.posz << "}\n" << flush;
 	return stream;
 }
+#endif
 
 class OctTreeInternalNode: public OctTreeNode { // the internal nodes are cells that summarize their children's properties
 public:
@@ -150,8 +154,8 @@ private:
 	double accz;
 };
 
-OctTreeInternalNode *OctTreeInternalNode::head = NULL;
-OctTreeInternalNode *OctTreeInternalNode::freelist = NULL;
+OctTreeInternalNode *OctTreeInternalNode::head = 0;
+OctTreeInternalNode *OctTreeInternalNode::freelist = 0;
 
 OctTreeInternalNode *OctTreeInternalNode::NewNode(const double px, const double py, const double pz) {
 #ifdef DEBUG
@@ -162,7 +166,7 @@ OctTreeInternalNode *OctTreeInternalNode::NewNode(const double px, const double 
 	in = new OctTreeInternalNode();
 	//Accesses to freelist should be atomic when NewNode is called
 	//concurrently.
-	//if (freelist == NULL) {
+	//if (freelist == 0) {
 	//	in = new OctTreeInternalNode();
 	//	in->link = head;
 	//	head = in;
@@ -177,15 +181,15 @@ OctTreeInternalNode *OctTreeInternalNode::NewNode(const double px, const double 
 	in->posy = py;
 	in->posz = pz;
 	//for (int i = 0; i < 8; i++)
-	//	in->child[i] = NULL;
-	in->child0 = NULL;
-	in->child1 = NULL;
-	in->child2 = NULL;
-	in->child3 = NULL;
-	in->child4 = NULL;
-	in->child5 = NULL;
-	in->child6 = NULL;
-	in->child7 = NULL;
+	//	in->child[i] = 0;
+	in->child0 = 0;
+	in->child1 = 0;
+	in->child2 = 0;
+	in->child3 = 0;
+	in->child4 = 0;
+	in->child5 = 0;
+	in->child6 = 0;
+	in->child7 = 0;
 
 	return in;
 }
@@ -281,7 +285,7 @@ void OctTreeInternalNode::Insert(OctTreeLeafNode * const b, const double r) // b
 		z = r;
 	}
 
-	if (GetChild(i) == NULL) {
+	if (GetChild(i) == 0) {
 		*GetChildRef(i) = b;
 	} else if (GetChild(i)->type == CELL) {
 		((OctTreeInternalNode *) (GetChild(i)))->Insert(b, 0.5 * r);
@@ -378,14 +382,14 @@ void OctTreeInternalNode::InsertChildren(double r, int *partitionSize, OctTreeLe
 		**partition2, OctTreeLeafNode **partition3, OctTreeLeafNode
 		**partition4, OctTreeLeafNode **partition5, OctTreeLeafNode
 		**partition6, OctTreeLeafNode **partition7) {
-	ChildrenInserter inserter0 = ChildrenInserter(r, posx, posy, posz, 0, partition0, partitionSize[0], GetChildRef(0));
-	ChildrenInserter inserter1 = ChildrenInserter(r, posx, posy, posz, 1, partition1, partitionSize[1], GetChildRef(1));
-	ChildrenInserter inserter2 = ChildrenInserter(r, posx, posy, posz, 2, partition2, partitionSize[2], GetChildRef(2));
-	ChildrenInserter inserter3 = ChildrenInserter(r, posx, posy, posz, 3, partition3, partitionSize[3], GetChildRef(3));
-	ChildrenInserter inserter4 = ChildrenInserter(r, posx, posy, posz, 4, partition4, partitionSize[4], GetChildRef(4));
-	ChildrenInserter inserter5 = ChildrenInserter(r, posx, posy, posz, 5, partition5, partitionSize[5], GetChildRef(5));
-	ChildrenInserter inserter6 = ChildrenInserter(r, posx, posy, posz, 6, partition6, partitionSize[6], GetChildRef(6));
-	ChildrenInserter inserter7 = ChildrenInserter(r, posx, posy, posz, 7, partition7, partitionSize[7], GetChildRef(7));
+	ChildrenInserter inserter0(r, posx, posy, posz, 0, partition0, partitionSize[0], GetChildRef(0));
+	ChildrenInserter inserter1(r, posx, posy, posz, 1, partition1, partitionSize[1], GetChildRef(1));
+	ChildrenInserter inserter2(r, posx, posy, posz, 2, partition2, partitionSize[2], GetChildRef(2));
+	ChildrenInserter inserter3(r, posx, posy, posz, 3, partition3, partitionSize[3], GetChildRef(3));
+	ChildrenInserter inserter4(r, posx, posy, posz, 4, partition4, partitionSize[4], GetChildRef(4));
+	ChildrenInserter inserter5(r, posx, posy, posz, 5, partition5, partitionSize[5], GetChildRef(5));
+	ChildrenInserter inserter6(r, posx, posy, posz, 6, partition6, partitionSize[6], GetChildRef(6));
+	ChildrenInserter inserter7(r, posx, posy, posz, 7, partition7, partitionSize[7], GetChildRef(7));
 	parallel_invoke(inserter0, inserter1, inserter2, inserter3, inserter4, inserter5, inserter6, inserter7);
 }
 
@@ -436,10 +440,10 @@ void OctTreeInternalNode::ComputeCenterOfMass(int &curr) // recursively summariz
 	for (int i = 0; i < 8; i++) {
 		//ch = child[i];
 		ch = *GetChildRef(i);
-		if (ch != NULL) {
-			//child[i] = NULL; // move non-NULL children to the front (needed to make other code faster)
+		if (ch != 0) {
+			//child[i] = 0; // move non-NULL children to the front (needed to make other code faster)
 			//child[j++] = ch;
-			*GetChildRef(i) = NULL; // move non-NULL children to the front (needed to make other code faster)
+			*GetChildRef(i) = 0; // move non-NULL children to the front (needed to make other code faster)
 			*GetChildRef(j++) = ch;
 
 			if (ch->type == BODY) {
@@ -530,21 +534,21 @@ void OctTreeLeafNode::RecurseForce(const OctTreeNode * const n, double dsq) // r
 		if (n->type == CELL) {
 			OctTreeInternalNode *in = (OctTreeInternalNode *) n;
 			dsq *= 0.25;
-			if (in->GetChild(0) != NULL) {
+			if (in->GetChild(0) != 0) {
 				RecurseForce(in->GetChild(0), dsq);
-				if (in->GetChild(1) != NULL) {
+				if (in->GetChild(1) != 0) {
 					RecurseForce(in->GetChild(1), dsq);
-					if (in->GetChild(2) != NULL) {
+					if (in->GetChild(2) != 0) {
 						RecurseForce(in->GetChild(2), dsq);
-						if (in->GetChild(3) != NULL) {
+						if (in->GetChild(3) != 0) {
 							RecurseForce(in->GetChild(3), dsq);
-							if (in->GetChild(4) != NULL) {
+							if (in->GetChild(4) != 0) {
 								RecurseForce(in->GetChild(4), dsq);
-								if (in->GetChild(5) != NULL) {
+								if (in->GetChild(5) != 0) {
 									RecurseForce(in->GetChild(5), dsq);
-									if (in->GetChild(6) != NULL) {
+									if (in->GetChild(6) != 0) {
 										RecurseForce(in->GetChild(6), dsq);
-										if (in->GetChild(7) != NULL) {
+										if (in->GetChild(7) != 0) {
 											RecurseForce(in->GetChild(7), dsq);
 										}
 									}
@@ -586,7 +590,7 @@ static inline void ReadInput(char *filename) {
 	FILE *f;
 
 	f = fopen(filename, "r+t");
-	if (f == NULL) {
+	if (f == 0) {
 		fprintf(stderr, "file not found: %s\n", filename);
 		exit(-1);
 	}
@@ -601,7 +605,7 @@ static inline void ReadInput(char *filename) {
 	epssq = eps * eps;
 	itolsq = 1.0 / (tol * tol);
 
-	if (bodies == NULL) {
+	if (bodies == 0) {
 		if (grainSize != 0)
 			fprintf(stderr,
 			"configuration: %d bodies, %d time steps, %d grain size (manually specified)\n", nbodies, timesteps,
@@ -721,7 +725,7 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "\n");
 	fprintf(stderr, "application: BarnesHut v1.0\n");
 
-	bodies = NULL;
+	bodies = 0;
 
 	if (argc == 3)
 		grainSize = atoi(argv[2]);
@@ -739,7 +743,7 @@ int main(int argc, char *argv[]) {
 		ReadInput(argv[1]);
 
 		lasttime = runtime;
-		gettimeofday(&starttime, NULL);
+		gettimeofday(&starttime, 0);
 
 		for (step = 0; step < timesteps; step++) { // time-step the system
 			double diameter, centerx, centery, centerz;
@@ -759,10 +763,13 @@ int main(int argc, char *argv[]) {
 			root = local_root;
 			gDiameter = diameter;
 
-			if (grainSize != 0)
-				parallel_for(blocked_range<int> (0, nbodies, grainSize), parallelProcessor);
-			else
-				parallel_for(blocked_range<int> (0, nbodies), parallelProcessor);
+			if (grainSize != 0) {
+				blocked_range<int> grainedRange(0, nbodies, grainSize);
+				parallel_for(grainedRange, parallelProcessor);
+			} else {
+				blocked_range<int> range(0, nbodies);
+				parallel_for(range, parallelProcessor);
+			}
 
 			OctTreeInternalNode::RecycleTree(); // recycle the tree
 
@@ -771,7 +778,7 @@ int main(int argc, char *argv[]) {
 			}
 		} // end of time step
 
-		gettimeofday(&endtime, NULL);
+		gettimeofday(&endtime, 0);
 		runtime = (long) (endtime.tv_sec * 1000.0 + endtime.tv_usec / 1000.0 - starttime.tv_sec * 1000.0
 				- starttime.tv_usec / 1000.0 + 0.5);
 
