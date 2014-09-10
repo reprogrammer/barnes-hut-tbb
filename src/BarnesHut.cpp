@@ -86,9 +86,15 @@ std::ostream &operator<<(std::ostream &stream, const OctTreeNode &node) {
 #endif
 
 // The internal nodes are cells that summarize their children's properties
-class [[asap::param("R"), asap::base_arg("OctTreeNode", "R")]] OctTreeInternalNode: public OctTreeNode {
+class
+REGION(
+Rc0, Rc1, Rc2, Rc3, Rc4, Rc5, Rc6, Rc7,
+Rp0, Rp1, Rp2, Rp3, Rp4, Rp5, Rp6, Rp7)
+PARAM(R)
+BASEARG(OctTreeNode, R)
+OctTreeInternalNode: public OctTreeNode {
 public:
-	static OctTreeInternalNode *NewNode ARG(Global, Global) (const double px, const double py, const double pz);
+	static OctTreeInternalNode *NewNode(const double px, const double py, const double pz);
 
 	static void RecycleTree() {
 		freelist = head;
@@ -106,24 +112,45 @@ public:
 			OctTreeLeafNode **partition5, OctTreeLeafNode **partition6,
 			OctTreeLeafNode **partition7);
 	static void ChildIDToPos(int childID, double radius, double *x, double *y, double *z);
-	OctTreeNode *child0, *child1, *child2, *child3, *child4, *child5,
-		    *child6, *child7;
+	OctTreeNode *child0 ARG(R:Rc0, R:Rc0);
+	OctTreeNode *child1 ARG(R:Rc1, R:Rc1);
+	OctTreeNode *child2 ARG(R:Rc2, R:Rc2);
+	OctTreeNode *child3 ARG(R:Rc3, R:Rc3);
+	OctTreeNode *child4 ARG(R:Rc4, R:Rc4);
+	OctTreeNode *child5 ARG(R:Rc5, R:Rc5);
+	OctTreeNode *child6 ARG(R:Rc6, R:Rc6);
+	OctTreeNode *child7 ARG(R:Rc7, R:Rc7);
 
 private:
 	//OctTreeInternalNode *link; // links all internal tree nodes so they can be recycled
 	static OctTreeInternalNode *head, *freelist; // free list for recycling
 
 	int ChildID(OctTreeLeafNode * const b);
-	void Partition(OctTreeLeafNode **b, const int n, int *partitionSize,
-			OctTreeLeafNode **partition0, OctTreeLeafNode **partition1,
-			OctTreeLeafNode **partition2, OctTreeLeafNode **partition3,
-			OctTreeLeafNode **partition4, OctTreeLeafNode **partition5,
-			OctTreeLeafNode **partition6, OctTreeLeafNode **partition7); 
-	void InsertChildren(double r, int *partitionSize, OctTreeLeafNode
-			**partition0, OctTreeLeafNode **partition1, OctTreeLeafNode
-			**partition2, OctTreeLeafNode **partition3, OctTreeLeafNode
-			**partition4, OctTreeLeafNode **partition5, OctTreeLeafNode
-			**partition6, OctTreeLeafNode **partition7); 
+
+	void Partition
+	PARAM(Rb)
+	(OctTreeLeafNode **b ARG(Rb, Rb), int n, int *partitionSize,
+	OctTreeLeafNode **partition0 ARG(Rb:Rp0, Rb:Rp0),
+	OctTreeLeafNode **partition1 ARG(Rb:Rp1, Rb:Rp1),
+	OctTreeLeafNode **partition2 ARG(Rb:Rp2, Rb:Rp2),
+	OctTreeLeafNode **partition3 ARG(Rb:Rp3, Rb:Rp3),
+	OctTreeLeafNode **partition4 ARG(Rb:Rp4, Rb:Rp4),
+	OctTreeLeafNode **partition5 ARG(Rb:Rp5, Rb:Rp5),
+	OctTreeLeafNode **partition6 ARG(Rb:Rp6, Rb:Rp6),
+	OctTreeLeafNode **partition7 ARG(Rb:Rp7, Rb:Rp7)); 
+
+
+	void InsertChildren
+	PARAM(Rp0, Rp1, Rp2, Rp3, Rp4, Rp5, Rp6, Rp7)
+	(double r, int *partitionSize,
+	OctTreeLeafNode **partition0 ARG(Rp0, Rp0),
+	OctTreeLeafNode **partition1 ARG(Rp1, Rp1),
+	OctTreeLeafNode **partition2 ARG(Rp2, Rp2),
+	OctTreeLeafNode **partition3 ARG(Rp3, Rp3),
+	OctTreeLeafNode **partition4 ARG(Rp4, Rp4),
+	OctTreeLeafNode **partition5 ARG(Rp5, Rp5),
+	OctTreeLeafNode **partition6 ARG(Rp6, Rp6),
+	OctTreeLeafNode **partition7 ARG(Rp7, Rp7));
 };
 
 // the tree leaves are the bodies
@@ -131,6 +158,20 @@ class [[asap::param("R"), asap::base_arg("OctTreeNode", "R")]] OctTreeLeafNode: 
 public:
 	OctTreeLeafNode();
 	~OctTreeLeafNode() {
+	}
+
+	void copyFrom(OctTreeLeafNode node) {
+		type = node.type;
+		mass = node.mass;
+		posx = node.posx;
+		posy = node.posy;
+		posz = node.posz;
+		velx = node.velx;
+		vely = node.vely;
+		velz = node.velz;
+		accx = node.accx;
+		accy = node.accy;
+		accz = node.accz;
 	}
 
 	void setVelocity(const double x, const double y, const double z) {
@@ -159,11 +200,11 @@ private:
 OctTreeInternalNode *OctTreeInternalNode::head = 0;
 OctTreeInternalNode *OctTreeInternalNode::freelist = 0;
 
-OctTreeInternalNode * OctTreeInternalNode::NewNode ARG(Global, Global) (const double px, const double py, const double pz) {
+OctTreeInternalNode * OctTreeInternalNode::NewNode(const double px, const double py, const double pz) {
 #ifdef DEBUG
 	cout << "NewNode(px = " << px << ", py = " << py << ", pz = " << pz << ")" << endl;
 #endif
-	OctTreeInternalNode *in ARG(Local, Global);
+	OctTreeInternalNode *in;
 
 	in = new OctTreeInternalNode();
 	//Accesses to freelist should be atomic when NewNode is called
@@ -232,7 +273,7 @@ void OctTreeInternalNode::ChildIDToPos(int childID, double radius, double *x, do
 }
 
 OctTreeNode** OctTreeInternalNode::GetChildRef(int i) {
-	OctTreeNode** childi = 0;
+	OctTreeNode **childi = 0;
 	switch (i) {
 		case 0:
 			childi = &child0;
@@ -335,12 +376,17 @@ OctTreeLeafNode **OctTreeInternalNode::GetPartition(int i, OctTreeLeafNode **par
 	return partitioni;
 }
 
-void OctTreeInternalNode::Partition(OctTreeLeafNode **b, const int n, int
-		*partitionSize, OctTreeLeafNode **partition0, OctTreeLeafNode
-		**partition1, OctTreeLeafNode **partition2, OctTreeLeafNode
-		**partition3, OctTreeLeafNode **partition4, OctTreeLeafNode
-		**partition5, OctTreeLeafNode **partition6, OctTreeLeafNode
-		**partition7) {
+void OctTreeInternalNode::Partition
+PARAM(Rb)
+(OctTreeLeafNode **b ARG(Rb, Rb), int n, int *partitionSize,
+OctTreeLeafNode **partition0 ARG(Rb:Rp0, Rb:Rp0),
+OctTreeLeafNode **partition1 ARG(Rb:Rp1, Rb:Rp1),
+OctTreeLeafNode **partition2 ARG(Rb:Rp2, Rb:Rp2),
+OctTreeLeafNode **partition3 ARG(Rb:Rp3, Rb:Rp3),
+OctTreeLeafNode **partition4 ARG(Rb:Rp4, Rb:Rp4),
+OctTreeLeafNode **partition5 ARG(Rb:Rp5, Rb:Rp5),
+OctTreeLeafNode **partition6 ARG(Rb:Rp6, Rb:Rp6),
+OctTreeLeafNode **partition7 ARG(Rb:Rp7, Rb:Rp7)) {
 	for (int i = 0; i < 8; ++i) {
 		partitionSize[i] = 0;
 	}
@@ -349,24 +395,26 @@ void OctTreeInternalNode::Partition(OctTreeLeafNode **b, const int n, int
 		OctTreeLeafNode **partitioni = GetPartition(partitionID,
 				partition0, partition1, partition2, partition3,
 				partition4, partition5, partition6, partition7);
-		partitioni[partitionSize[partitionID]] = b[i];
+		OctTreeLeafNode *biCopy = new OctTreeLeafNode();
+		biCopy->copyFrom(*b[i]);
+		partitioni[partitionSize[partitionID]] = biCopy;
 		++partitionSize[partitionID];
 	}
 }
 
-class PARAM(Rpartition) ChildrenInserter {
+class PARAM(Rp, Rc) ChildrenInserter {
 private:
-	double r ARG(Rpartition);
-	double posx ARG(Rpartition);
-	double posy ARG(Rpartition);
-	double posz ARG(Rpartition);
-	int childID ARG(Rpartition);
-	OctTreeLeafNode **partition ARG(Rpartition, Rpartition, Rpartition);
-	int partitionSize ARG(Rpartition);
-	OctTreeNode **child ARG(Rpartition, Rpartition, Rpartition);
+	double r ARG(Rc);
+	double posx ARG(Rc);
+	double posy ARG(Rc);
+	double posz ARG(Rc);
+	int childID ARG(Rc);
+	OctTreeLeafNode **partition ARG(Rp, Rp, Rp);
+	int partitionSize ARG(Rp);
+	OctTreeNode **child ARG(Rc, Rc, Rc);
 
 public:
-	ChildrenInserter (double r, double posx, double posy, double posz, int childID, OctTreeLeafNode **partition ARG(Rpartition, Rpartition), int partitionSize, OctTreeNode **child ARG(Rpartition, Rpartition)): r(r), posx(posx), posy(posy), posz(posz), childID(childID), partition(partition), partitionSize(partitionSize), child(child) {}
+	ChildrenInserter(double r, double posx, double posy, double posz, int childID, OctTreeLeafNode **partition ARG(Rp, Rp), int partitionSize, OctTreeNode **child ARG(Rc, Rc)): r(r), posx(posx), posy(posy), posz(posz), childID(childID), partition(partition), partitionSize(partitionSize), child(child) {}
 
 	void operator()() const {
 		if (partitionSize > 1) {
@@ -382,23 +430,29 @@ public:
 	}
 };
 
-void OctTreeInternalNode::InsertChildren(double r, int *partitionSize, OctTreeLeafNode
-		**partition0, OctTreeLeafNode **partition1, OctTreeLeafNode
-		**partition2, OctTreeLeafNode **partition3, OctTreeLeafNode
-		**partition4, OctTreeLeafNode **partition5, OctTreeLeafNode
-		**partition6, OctTreeLeafNode **partition7) {
-	ChildrenInserter inserter0(r, posx, posy, posz, 0, partition0, partitionSize[0], GetChildRef(0));
-	ChildrenInserter inserter1(r, posx, posy, posz, 1, partition1, partitionSize[1], GetChildRef(1));
-	ChildrenInserter inserter2(r, posx, posy, posz, 2, partition2, partitionSize[2], GetChildRef(2));
-	ChildrenInserter inserter3(r, posx, posy, posz, 3, partition3, partitionSize[3], GetChildRef(3));
-	ChildrenInserter inserter4(r, posx, posy, posz, 4, partition4, partitionSize[4], GetChildRef(4));
-	ChildrenInserter inserter5(r, posx, posy, posz, 5, partition5, partitionSize[5], GetChildRef(5));
-	ChildrenInserter inserter6(r, posx, posy, posz, 6, partition6, partitionSize[6], GetChildRef(6));
-	ChildrenInserter inserter7(r, posx, posy, posz, 7, partition7, partitionSize[7], GetChildRef(7));
+void OctTreeInternalNode::InsertChildren
+PARAM(Rp0, Rp1, Rp2, Rp3, Rp4, Rp5, Rp6, Rp7)
+(double r, int *partitionSize,
+OctTreeLeafNode **partition0 ARG(Rp0, Rp0),
+OctTreeLeafNode **partition1 ARG(Rp1, Rp1),
+OctTreeLeafNode **partition2 ARG(Rp2, Rp2),
+OctTreeLeafNode **partition3 ARG(Rp3, Rp3),
+OctTreeLeafNode **partition4 ARG(Rp4, Rp4),
+OctTreeLeafNode **partition5 ARG(Rp5, Rp5),
+OctTreeLeafNode **partition6 ARG(Rp6, Rp6),
+OctTreeLeafNode **partition7 ARG(Rp7, Rp7)) {
+	ChildrenInserter inserter0 ARG(Rp0, R:Rc0) (r, posx, posy, posz, 0, partition0, partitionSize[0], &child0);
+	ChildrenInserter inserter1 ARG(Rp1, R:Rc1) (r, posx, posy, posz, 1, partition1, partitionSize[1], &child1);
+	ChildrenInserter inserter2 ARG(Rp2, R:Rc2) (r, posx, posy, posz, 2, partition2, partitionSize[2], &child2);
+	ChildrenInserter inserter3 ARG(Rp3, R:Rc3) (r, posx, posy, posz, 3, partition3, partitionSize[3], &child3);
+	ChildrenInserter inserter4 ARG(Rp4, R:Rc4) (r, posx, posy, posz, 4, partition4, partitionSize[4], &child4);
+	ChildrenInserter inserter5 ARG(Rp5, R:Rc5) (r, posx, posy, posz, 5, partition5, partitionSize[5], &child5);
+	ChildrenInserter inserter6 ARG(Rp6, R:Rc6) (r, posx, posy, posz, 6, partition6, partitionSize[6], &child6);
+	ChildrenInserter inserter7 ARG(Rp7, R:Rc7) (r, posx, posy, posz, 7, partition7, partitionSize[7], &child7);
 	parallel_invoke(inserter0, inserter1, inserter2, inserter3, inserter4, inserter5, inserter6, inserter7);
 }
 
-void OctTreeInternalNode::InsertAll(OctTreeLeafNode **b, int n, double r)
+void OctTreeInternalNode::InsertAll PARAM(Rb) (OctTreeLeafNode **b ARG(Rb, Rb), int n, double r)
 {
 #ifdef DEBUG
 	cout << "InsertAll(*this = " << *this << ", n = " << n << ", r = " << r << ")" << endl;
@@ -407,14 +461,14 @@ void OctTreeInternalNode::InsertAll(OctTreeLeafNode **b, int n, double r)
 		return;
 	}
 	//OctTreeLeafNode **partition = new OctTreeLeafNode**[8];
-	OctTreeLeafNode **partition0;
-	OctTreeLeafNode **partition1;
-	OctTreeLeafNode **partition2;
-	OctTreeLeafNode **partition3;
-	OctTreeLeafNode **partition4;
-	OctTreeLeafNode **partition5;
-	OctTreeLeafNode **partition6;
-	OctTreeLeafNode **partition7;
+	OctTreeLeafNode **partition0 ARG(Local, Rb:Rp0, Rb:Rp0);
+	OctTreeLeafNode **partition1 ARG(Local, Rb:Rp1, Rb:Rp1);
+	OctTreeLeafNode **partition2 ARG(Local, Rb:Rp2, Rb:Rp2);
+	OctTreeLeafNode **partition3 ARG(Local, Rb:Rp3, Rb:Rp3);
+	OctTreeLeafNode **partition4 ARG(Local, Rb:Rp4, Rb:Rp4);
+	OctTreeLeafNode **partition5 ARG(Local, Rb:Rp5, Rb:Rp5);
+	OctTreeLeafNode **partition6 ARG(Local, Rb:Rp6, Rb:Rp6);
+	OctTreeLeafNode **partition7 ARG(Local, Rb:Rp7, Rb:Rp7);
 	int partitionSize[8];
 	partition0 = new OctTreeLeafNode*[n];
 	partition1 = new OctTreeLeafNode*[n];

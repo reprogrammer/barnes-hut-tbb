@@ -19,6 +19,7 @@
 #endif
 
 #define PARAM(...) [[asap::param(#__VA_ARGS__)]]
+#define BASEARG(R,C) [[asap::base_arg(#R,#C)]]
 #define ARG_(...) [[asap::arg(#__VA_ARGS__)]]
 
 #endif
