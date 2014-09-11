@@ -31,7 +31,7 @@
 #include <cstdio>
 #include <cmath>
 #include <sys/time.h>
-#include <iostream>
+//#include <iostream>
 
 #include "asap.h"
 //#include "tbb/blocked_range.h"
@@ -687,14 +687,15 @@ static int nbodies; // number of bodies in system
 static int timesteps; // number of time steps to run
 static int grainSize; // number of parallel tasks
 
-static inline void ReadInput(char *filename) {
+static inline int ReadInput(char *filename) {
   double vx, vy, vz;
   FILE *f ARG(Local, *);
 
   f = fopen(filename, "r+t");
   if (f == 0) {
     fprintf(stderr, "file not found: %s\n", filename);
-    exit(-1);
+    //exit(-1);
+    return 1;
   }
 
   fscanf(f, "%d", &nbodies);
@@ -733,6 +734,7 @@ static inline void ReadInput(char *filename) {
   }
 
   fclose(f);
+  return 0;
 }
 
 static inline void ComputeCenterAndDiameter(const int n, double &diameter
@@ -843,7 +845,9 @@ int main(int argc, char *argv[]) {
   run = 0;
 
   while (((run < 3) || (abs(lasttime - runtime) * 64 > min(lasttime, runtime))) && (run < 7)) {
-    ReadInput(argv[1]);
+    if (ReadInput(argv[1]) != 0) {
+      return 1;
+    }
 
     lasttime = runtime;
     gettimeofday(&starttime, 0);
