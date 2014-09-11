@@ -164,8 +164,6 @@ class PARAM(R) BASEARG(OctTreeNode, R)
 OctTreeLeafNode: public OctTreeNode {
 public:
 	OctTreeLeafNode();
-	~OctTreeLeafNode() {
-	}
 
 	void copyFrom(OctTreeLeafNode node) {
 		type = node.type;
