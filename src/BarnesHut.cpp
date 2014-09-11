@@ -735,8 +735,9 @@ static inline void ReadInput(char *filename) {
   fclose(f);
 }
 
-static inline void ComputeCenterAndDiameter(const int n, double &diameter, double &centerx, double &centery,
-    double &centerz) {
+static inline void ComputeCenterAndDiameter(const int n, double &diameter
+    ARG(Global), double &centerx ARG(Global), double &centery ARG(Global),
+    double &centerz ARG(Global)) {
   double minx, miny, minz;
   double maxx, maxy, maxz;
   double posx, posy, posz;
@@ -779,7 +780,7 @@ static inline void ComputeCenterAndDiameter(const int n, double &diameter, doubl
   centerz = (maxz + minz) * 0.5;
 }
 
-static inline int min(int a, int b) {
+static inline int min(long a, long b) {
   if (a < b)
     a = b;
   return a;
@@ -803,7 +804,7 @@ static void PrintDouble(double d) {
   }
 }
 
-static OctTreeInternalNode *root;
+static OctTreeInternalNode *root ARG(Global);
 static double gDiameter;
 
 class ParallelForProcessor {
@@ -848,11 +849,11 @@ int main(int argc, char *argv[]) {
     gettimeofday(&starttime, 0);
 
     for (step = 0; step < timesteps; step++) { // time-step the system
-      double diameter, centerx, centery, centerz;
+      double diameter ARG(Global), centerx ARG(Global), centery ARG(Global), centerz ARG(Global);
       ComputeCenterAndDiameter(nbodies, diameter, centerx, centery, centerz);
 
       // create the tree's root
-      OctTreeInternalNode *local_root ARG(Local) = new OctTreeInternalNode(centerx, centery, centerz); 
+      OctTreeInternalNode *local_root ARG(Global) = new OctTreeInternalNode(centerx, centery, centerz); 
       //OctTreeInternalNode *local_root ARG(Local) = OctTreeInternalNode::NewNode(centerx, centery, centerz);
 
       const double radius = diameter * 0.5;
