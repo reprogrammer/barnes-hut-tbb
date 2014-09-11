@@ -684,7 +684,7 @@ static int grainSize; // number of parallel tasks
 
 static inline void ReadInput(char *filename) {
   double vx, vy, vz;
-  FILE *f;
+  FILE *f ARG(Local, *);
 
   f = fopen(filename, "r+t");
   if (f == 0) {
