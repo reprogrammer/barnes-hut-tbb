@@ -447,9 +447,9 @@ public:
       *child = cell;
       cell->InsertAll(partition, partitionSize, rh);
     } else if (partitionSize == 1) {
-      *child = partition[0];
-      //*child = new OctTreeLeafNode();
-      //((OctTreeLeafNode *) (*child))->copyFrom(partition[0]);
+      //*child = partition[0];
+      *child = new OctTreeLeafNode();
+      ((OctTreeLeafNode *) (*child))->copyFrom(partition[0]);
     }
   }
 };
