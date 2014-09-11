@@ -122,11 +122,26 @@ public:
   void ComputeCenterOfMass(int &curr); // recursively summarizes info about subtrees
   OctTreeNode** GetChildRef(int i);
   OctTreeNode* GetChild(int i);
-  OctTreeLeafNode **GetPartition(int i, OctTreeLeafNode **partition0,
-      OctTreeLeafNode **partition1, OctTreeLeafNode **partition2,
-      OctTreeLeafNode **partition3, OctTreeLeafNode **partition4,
-      OctTreeLeafNode **partition5, OctTreeLeafNode **partition6,
-      OctTreeLeafNode **partition7);
+
+  //OctTreeLeafNode **GetPartition(int i, OctTreeLeafNode **partition0,
+  //  OctTreeLeafNode **partition1, OctTreeLeafNode **partition2,
+  //  OctTreeLeafNode **partition3, OctTreeLeafNode **partition4,
+  //  OctTreeLeafNode **partition5, OctTreeLeafNode **partition6,
+  //  OctTreeLeafNode **partition7);
+
+  OctTreeLeafNode **GetPartition
+  ARG(Rb:*, Rb:*)
+  PARAM(Rb)
+  (OctTreeLeafNode **b ARG(Rb, Rb), int i,
+   OctTreeLeafNode **partition0 ARG(Rb:Rp0, Rb:Rp0),
+   OctTreeLeafNode **partition1 ARG(Rb:Rp1, Rb:Rp1),
+   OctTreeLeafNode **partition2 ARG(Rb:Rp2, Rb:Rp2),
+   OctTreeLeafNode **partition3 ARG(Rb:Rp3, Rb:Rp3),
+   OctTreeLeafNode **partition4 ARG(Rb:Rp4, Rb:Rp4),
+   OctTreeLeafNode **partition5 ARG(Rb:Rp5, Rb:Rp5),
+   OctTreeLeafNode **partition6 ARG(Rb:Rp6, Rb:Rp6),
+   OctTreeLeafNode **partition7 ARG(Rb:Rp7, Rb:Rp7));
+
   static void ChildIDToPos(int childID, double radius, double *x, double *y, double *z);
   OctTreeNode *child0 ARG(R:Rc0, R:Rc0);
   OctTreeNode *child1 ARG(R:Rc1, R:Rc1);
@@ -293,7 +308,7 @@ void OctTreeInternalNode::ChildIDToPos(int childID, double radius, double *x, do
 }
 
 OctTreeNode** OctTreeInternalNode::GetChildRef(int i) {
-  OctTreeNode **childi = 0;
+  OctTreeNode **childi ARG(Local, Root:*, Root:*) = 0;
   switch (i) {
     case 0:
       childi = &child0;
@@ -362,12 +377,19 @@ void OctTreeInternalNode::Insert(OctTreeLeafNode * const b, const double r) // b
   }
 }*/
 
-OctTreeLeafNode **OctTreeInternalNode::GetPartition(int i, OctTreeLeafNode **partition0,
-    OctTreeLeafNode **partition1, OctTreeLeafNode **partition2,
-    OctTreeLeafNode **partition3, OctTreeLeafNode **partition4,
-    OctTreeLeafNode **partition5, OctTreeLeafNode **partition6,
-    OctTreeLeafNode **partition7) {
-  OctTreeLeafNode **partitioni = 0;
+OctTreeLeafNode **OctTreeInternalNode::GetPartition
+ARG(Rb:*, Rb:*)
+PARAM(Rb)
+(OctTreeLeafNode **b ARG(Rb, Rb), int i,
+ OctTreeLeafNode **partition0 ARG(Rb:Rp0, Rb:Rp0),
+ OctTreeLeafNode **partition1 ARG(Rb:Rp1, Rb:Rp1),
+ OctTreeLeafNode **partition2 ARG(Rb:Rp2, Rb:Rp2),
+ OctTreeLeafNode **partition3 ARG(Rb:Rp3, Rb:Rp3),
+ OctTreeLeafNode **partition4 ARG(Rb:Rp4, Rb:Rp4),
+ OctTreeLeafNode **partition5 ARG(Rb:Rp5, Rb:Rp5),
+ OctTreeLeafNode **partition6 ARG(Rb:Rp6, Rb:Rp6),
+ OctTreeLeafNode **partition7 ARG(Rb:Rp7, Rb:Rp7)) {
+  OctTreeLeafNode **partitioni ARG(Local, Rb:*, Rb:*) = 0;
   switch (i) {
     case 0:
       partitioni = partition0;
@@ -413,7 +435,7 @@ OctTreeLeafNode **partition7 ARG(Rb:Rp7, Rb:Rp7)) {
   }
   for (int i = 0; i < n; ++i) {
     int partitionID = ChildID(b[i]);
-    OctTreeLeafNode **partitioni = GetPartition(partitionID,
+    OctTreeLeafNode **partitioni ARG(Local, Rb:*, Rb:*) = GetPartition(b, partitionID,
         partition0, partition1, partition2, partition3,
         partition4, partition5, partition6, partition7);
     //partitioni[partitionSize[partitionID]] = b[i];
@@ -512,11 +534,11 @@ void OctTreeInternalNode::InsertAll PARAM(Rb) (OctTreeLeafNode **b ARG(Rb, Rb), 
   //  delete partition[i];
   //}
   //delete partition;
-  for (int i = 0; i < 8; ++i) {
-    delete [] GetPartition(i, partition0, partition1, partition2,
-        partition3, partition4, partition5, partition6,
-        partition7);
-  }
+  //for (int i = 0; i < 8; ++i) {
+  //  delete [] GetPartition(b, i, partition0, partition1, partition2,
+  //      partition3, partition4, partition5, partition6,
+  //      partition7);
+  //}
 }
 
 void OctTreeInternalNode::ComputeCenterOfMass(int &curr) // recursively summarizes info about subtrees
