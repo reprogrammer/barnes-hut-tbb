@@ -120,8 +120,8 @@ public:
   //void Insert(OctTreeLeafNode * const b, const double r); // builds the tree
   void InsertAll(OctTreeLeafNode **b, int n, double r);
   void ComputeCenterOfMass(int &curr); // recursively summarizes info about subtrees
-  OctTreeNode** GetChildRef(int i);
-  OctTreeNode* GetChild(int i);
+  OctTreeNode** GetChildRef ARG(*, *) (int i);
+  OctTreeNode* GetChild ARG(*, *) (int i);
 
   //OctTreeLeafNode **GetPartition(int i, OctTreeLeafNode **partition0,
   //  OctTreeLeafNode **partition1, OctTreeLeafNode **partition2,
@@ -307,8 +307,8 @@ void OctTreeInternalNode::ChildIDToPos(int childID, double radius, double *x, do
   }
 }
 
-OctTreeNode** OctTreeInternalNode::GetChildRef(int i) {
-  OctTreeNode **childi ARG(Local, Root:*, Root:*) = 0;
+OctTreeNode** OctTreeInternalNode::GetChildRef ARG(*, *) (int i) {
+  OctTreeNode **childi ARG(Local, *, *) = 0;
   switch (i) {
     case 0:
       childi = &child0;
@@ -338,7 +338,7 @@ OctTreeNode** OctTreeInternalNode::GetChildRef(int i) {
   return childi;
 }
 
-OctTreeNode* OctTreeInternalNode::GetChild(int i) {
+OctTreeNode* OctTreeInternalNode::GetChild ARG(*, *) (int i) {
   return *GetChildRef(i);
 }
 
@@ -544,7 +544,7 @@ void OctTreeInternalNode::InsertAll PARAM(Rb) (OctTreeLeafNode **b ARG(Rb, Rb), 
 void OctTreeInternalNode::ComputeCenterOfMass(int &curr) // recursively summarizes info about subtrees
 {
   double m, px = 0.0, py = 0.0, pz = 0.0;
-  OctTreeNode *ch;
+  OctTreeNode *ch ARG(*, *);
 
   int j = 0;
   mass = 0.0;
