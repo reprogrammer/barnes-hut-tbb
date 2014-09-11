@@ -120,7 +120,7 @@ public:
   //void Insert(OctTreeLeafNode * const b, const double r); // builds the tree
   void InsertAll(OctTreeLeafNode **b, int n, double r);
   // recursively summarizes info about subtrees
-  void ComputeCenterOfMass(int &curr);
+  void ComputeCenterOfMass(int &curr ARG(Global));
   OctTreeNode** GetChildRef ARG(*, *) (int i);
   OctTreeNode* GetChild ARG(*, *) (int i);
 
@@ -545,7 +545,7 @@ void OctTreeInternalNode::InsertAll PARAM(Rb) (OctTreeLeafNode **b ARG(Rb, Rb), 
 }
 
 // Recursively summarizes info about subtrees
-void OctTreeInternalNode::ComputeCenterOfMass(int &curr) {
+void OctTreeInternalNode::ComputeCenterOfMass(int &curr ARG(Global)) {
   double m, px = 0.0, py = 0.0, pz = 0.0;
   OctTreeNode *ch ARG(*, *);
 
@@ -861,7 +861,7 @@ int main(int argc, char *argv[]) {
 //      }
       local_root->InsertAll(bodies, nbodies, radius);
 
-      int curr = 0;
+      int curr ARG(Global) = 0;
       // summarize subtree info in each internal node (plus restructure tree and
       // sort bodies for performance reasons)
       local_root->ComputeCenterOfMass(curr);
