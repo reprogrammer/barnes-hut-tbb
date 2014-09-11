@@ -72,6 +72,11 @@ public:
 	double posx ARG(R);
 	double posy ARG(R);
 	double posz ARG(R);
+
+	OctTreeNode(int type, double mass, double posx, double posy, double posz) : type(type), mass(mass), posx(posx), posy(posy), posz(posz) {}
+
+	OctTreeNode() : type(0), mass(0), posx(0), posy(0), posz(0) {}
+
 #ifdef DEBUG
 	friend std::ostream& operator<<(std::ostream &stream, const OctTreeNode &node);
 #endif
@@ -94,14 +99,15 @@ PARAM(R)
 BASEARG(OctTreeNode, R)
 OctTreeInternalNode: public OctTreeNode {
 public:
-	static OctTreeInternalNode *NewNode(const double px, const double py, const double pz);
 
+	OctTreeInternalNode(double px, double py, double pz);
+	//static void NewNode PARAM(R) (OctTreeInternalNode * in ARG(R), double px, double py, double pz);
 	static void RecycleTree() {
 		freelist = head;
 	}
 
 public:
-	void Insert(OctTreeLeafNode * const b, const double r); // builds the tree
+	//void Insert(OctTreeLeafNode * const b, const double r); // builds the tree
 	void InsertAll(OctTreeLeafNode **b, int n, double r);
 	void ComputeCenterOfMass(int &curr); // recursively summarizes info about subtrees
 	OctTreeNode** GetChildRef(int i);
@@ -154,7 +160,8 @@ private:
 };
 
 // the tree leaves are the bodies
-class [[asap::param("R"), asap::base_arg("OctTreeNode", "R")]] OctTreeLeafNode: public OctTreeNode {
+class PARAM(R) BASEARG(OctTreeNode, R)
+OctTreeLeafNode: public OctTreeNode {
 public:
 	OctTreeLeafNode();
 	~OctTreeLeafNode() {
@@ -200,31 +207,19 @@ private:
 OctTreeInternalNode *OctTreeInternalNode::head = 0;
 OctTreeInternalNode *OctTreeInternalNode::freelist = 0;
 
-OctTreeInternalNode * OctTreeInternalNode::NewNode(const double px, const double py, const double pz) {
+OctTreeInternalNode::OctTreeInternalNode(double posx, double posy, double posz) : OctTreeNode(CELL, mass, posx, posy, posz), child0(0), child1(0), child2(0), child3(0), child4(0), child5(0), child6(0), child7(0) { }
+
+/*
+void OctTreeInternalNode::NewNode PARAM(R) (OctTreeInternalNode * in ARG(R), double px, double py, double pz) {
 #ifdef DEBUG
 	cout << "NewNode(px = " << px << ", py = " << py << ", pz = " << pz << ")" << endl;
 #endif
-	OctTreeInternalNode *in;
-
-	in = new OctTreeInternalNode();
-	//Accesses to freelist should be atomic when NewNode is called
-	//concurrently.
-	//if (freelist == 0) {
-	//	in = new OctTreeInternalNode();
-	//	in->link = head;
-	//	head = in;
-	//} else { // get node from freelist
-	//	in = freelist;
-	//	freelist = freelist->link;
-	//}
-
+	//OctTreeInternalNode *in ARG(Local, R) = new OctTreeInternalNode;
 	in->type = CELL;
 	in->mass = 0.0;
 	in->posx = px;
 	in->posy = py;
 	in->posz = pz;
-	//for (int i = 0; i < 8; i++)
-	//	in->child[i] = 0;
 	in->child0 = 0;
 	in->child1 = 0;
 	in->child2 = 0;
@@ -233,9 +228,8 @@ OctTreeInternalNode * OctTreeInternalNode::NewNode(const double px, const double
 	in->child5 = 0;
 	in->child6 = 0;
 	in->child7 = 0;
-
-	return in;
 }
+*/
 
 int OctTreeInternalNode::ChildID(OctTreeLeafNode * const b)
 {
@@ -307,6 +301,7 @@ OctTreeNode* OctTreeInternalNode::GetChild(int i) {
 	return *GetChildRef(i);
 }
 
+/*
 void OctTreeInternalNode::Insert(OctTreeLeafNode * const b, const double r) // builds the tree
 {
 #ifdef DEBUG
@@ -339,7 +334,7 @@ void OctTreeInternalNode::Insert(OctTreeLeafNode * const b, const double r) // b
 		cell->Insert((OctTreeLeafNode *) (GetChild(i)), rh);
 		*GetChildRef(i) = cell;
 	}
-}
+}*/
 
 OctTreeLeafNode **OctTreeInternalNode::GetPartition(int i, OctTreeLeafNode **partition0,
 		OctTreeLeafNode **partition1, OctTreeLeafNode **partition2,
@@ -421,7 +416,8 @@ public:
 			double x, y, z;
 			OctTreeInternalNode::ChildIDToPos(childID, r, &x, &y, &z);
 			double rh = 0.5 * r;
-			OctTreeInternalNode *cell = OctTreeInternalNode::NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
+			OctTreeInternalNode *cell ARG(Rc) = new OctTreeInternalNode(posx - rh + x, posy - rh + y, posz - rh + z);
+			//OctTreeInternalNode *cell ARG(Rc) = OctTreeInternalNode::NewNode(posx - rh + x, posy - rh + y, posz - rh + z);
 			*child = cell;
 			cell->InsertAll(partition, partitionSize, rh);
 		} else if (partitionSize == 1) {
@@ -814,7 +810,9 @@ int main(int argc, char *argv[]) {
 			double diameter, centerx, centery, centerz;
 			ComputeCenterAndDiameter(nbodies, diameter, centerx, centery, centerz);
 
-			OctTreeInternalNode *local_root = OctTreeInternalNode::NewNode(centerx, centery, centerz); // create the tree's root
+			// create the tree's root
+			OctTreeInternalNode *local_root ARG(Local) = new OctTreeInternalNode(centerx, centery, centerz); 
+			//OctTreeInternalNode *local_root ARG(Local) = OctTreeInternalNode::NewNode(centerx, centery, centerz);
 
 			const double radius = diameter * 0.5;
 //			for (int i = 0; i < nbodies; ++i) {
