@@ -33,13 +33,13 @@
 #include <sys/time.h>
 #include <iostream>
 
-//#include "tbb/blocked_range.h"
-//#include "tbb/parallel_for.h"
-//#include "tbb/parallel_invoke.h"
+#include "tbb/blocked_range.h"
+#include "tbb/parallel_for.h"
+#include "tbb/parallel_invoke.h"
 #include "asap.h"
-#include "../include/blocked_range.h"
-#include "../include/parallel_for.h"
-#include "../include/parallel_invoke.h"
+//#include "../include/blocked_range.h"
+//#include "../include/parallel_for.h"
+//#include "../include/parallel_invoke.h"
 
 //#include "tbb/task_scheduler_init.h"
 //#include "tbb/task_group.h"
@@ -100,8 +100,18 @@ BASEARG(OctTreeNode, R)
 OctTreeInternalNode: public OctTreeNode {
 public:
 
-  OctTreeInternalNode(double px, double py, double pz);
+  OctTreeInternalNode(double posx, double posy, double posz) : OctTreeNode(CELL,
+      0, posx, posy, posz), child0(0), child1(0), child2(0), child3(0),
+  child4(0), child5(0), child6(0), child7(0) { }
+
   //static void NewNode PARAM(R) (OctTreeInternalNode * in ARG(R), double px, double py, double pz);
+  void copyFrom PARAM(Rn) (OctTreeInternalNode *node ARG(Rn)) {
+    type = node->type;
+    mass = node->mass;
+    posx = node->posx;
+    posy = node->posy;
+    posz = node->posz;
+  }
   static void RecycleTree() {
     freelist = head;
   }
@@ -163,20 +173,40 @@ private:
 class PARAM(R) BASEARG(OctTreeNode, R)
 OctTreeLeafNode: public OctTreeNode {
 public:
-  OctTreeLeafNode();
+  OctTreeLeafNode() {
+    type = BODY;
+    mass = 0.0;
+    posx = 0.0;
+    posy = 0.0;
+    posz = 0.0;
+    velx = 0.0;
+    vely = 0.0;
+    velz = 0.0;
+    accx = 0.0;
+    accy = 0.0;
+    accz = 0.0;
+  }
 
-  void copyFrom(OctTreeLeafNode node) {
-    type = node.type;
-    mass = node.mass;
-    posx = node.posx;
-    posy = node.posy;
-    posz = node.posz;
-    velx = node.velx;
-    vely = node.vely;
-    velz = node.velz;
-    accx = node.accx;
-    accy = node.accy;
-    accz = node.accz;
+  OctTreeLeafNode(int type, double mass, double posx, double posy, double posz,
+      double velx, double vely, double velz, double accx, double accy, double
+      accz) : OctTreeNode(type, mass, posx, posy, posz), velx(velx), vely(vely),
+  velz(velz), accx(accx), accy(accy), accz(accz) {}
+
+  //OctTreeLeafNode(const OctTreeLeafNode& node) {
+  //}
+
+  void copyFrom PARAM(Rn) (OctTreeLeafNode *node ARG(Rn)) {
+    type = node->type;
+    mass = node->mass;
+    posx = node->posx;
+    posy = node->posy;
+    posz = node->posz;
+    velx = node->velx;
+    vely = node->vely;
+    velz = node->velz;
+    accx = node->accx;
+    accy = node->accy;
+    accz = node->accz;
   }
 
   void setVelocity(const double x, const double y, const double z) {
@@ -204,8 +234,6 @@ private:
 
 OctTreeInternalNode *OctTreeInternalNode::head = 0;
 OctTreeInternalNode *OctTreeInternalNode::freelist = 0;
-
-OctTreeInternalNode::OctTreeInternalNode(double posx, double posy, double posz) : OctTreeNode(CELL, mass, posx, posy, posz), child0(0), child1(0), child2(0), child3(0), child4(0), child5(0), child6(0), child7(0) { }
 
 /*
 void OctTreeInternalNode::NewNode PARAM(R) (OctTreeInternalNode * in ARG(R), double px, double py, double pz) {
@@ -388,9 +416,8 @@ OctTreeLeafNode **partition7 ARG(Rb:Rp7, Rb:Rp7)) {
     OctTreeLeafNode **partitioni = GetPartition(partitionID,
         partition0, partition1, partition2, partition3,
         partition4, partition5, partition6, partition7);
-    OctTreeLeafNode *biCopy = new OctTreeLeafNode();
-    biCopy->copyFrom(*b[i]);
-    partitioni[partitionSize[partitionID]] = biCopy;
+    //partitioni[partitionSize[partitionID]]->copyFrom(b[i]);
+    partitioni[partitionSize[partitionID]] = b[i];
     ++partitionSize[partitionID];
   }
 }
@@ -420,6 +447,8 @@ public:
       cell->InsertAll(partition, partitionSize, rh);
     } else if (partitionSize == 1) {
       *child = partition[0];
+      //*child = new OctTreeLeafNode();
+      //((OctTreeLeafNode *) (*child))->copyFrom(partition[0]);
     }
   }
 };
@@ -522,20 +551,6 @@ void OctTreeInternalNode::ComputeCenterOfMass(int &curr) // recursively summariz
   posx = px * m;
   posy = py * m;
   posz = pz * m;
-}
-
-OctTreeLeafNode::OctTreeLeafNode() {
-  type = BODY;
-  mass = 0.0;
-  posx = 0.0;
-  posy = 0.0;
-  posz = 0.0;
-  velx = 0.0;
-  vely = 0.0;
-  velz = 0.0;
-  accx = 0.0;
-  accy = 0.0;
-  accz = 0.0;
 }
 
 void OctTreeLeafNode::Advance() // advances a body's velocity and position by one time step
