@@ -33,13 +33,13 @@
 #include <sys/time.h>
 #include <iostream>
 
-#include "tbb/blocked_range.h"
-#include "tbb/parallel_for.h"
-#include "tbb/parallel_invoke.h"
 #include "asap.h"
-//#include "../include/blocked_range.h"
-//#include "../include/parallel_for.h"
-//#include "../include/parallel_invoke.h"
+//#include "tbb/blocked_range.h"
+//#include "tbb/parallel_for.h"
+//#include "tbb/parallel_invoke.h"
+#include "../include/blocked_range.h"
+#include "../include/parallel_for.h"
+#include "../include/parallel_invoke.h"
 
 //#include "tbb/task_scheduler_init.h"
 //#include "tbb/task_group.h"
@@ -416,8 +416,9 @@ OctTreeLeafNode **partition7 ARG(Rb:Rp7, Rb:Rp7)) {
     OctTreeLeafNode **partitioni = GetPartition(partitionID,
         partition0, partition1, partition2, partition3,
         partition4, partition5, partition6, partition7);
-    //partitioni[partitionSize[partitionID]]->copyFrom(b[i]);
-    partitioni[partitionSize[partitionID]] = b[i];
+    //partitioni[partitionSize[partitionID]] = b[i];
+    partitioni[partitionSize[partitionID]] = new OctTreeLeafNode();
+    partitioni[partitionSize[partitionID]]->copyFrom(b[i]);
     ++partitionSize[partitionID];
   }
 }
