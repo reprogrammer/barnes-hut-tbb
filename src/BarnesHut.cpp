@@ -119,7 +119,8 @@ public:
 public:
   //void Insert(OctTreeLeafNode * const b, const double r); // builds the tree
   void InsertAll(OctTreeLeafNode **b, int n, double r);
-  void ComputeCenterOfMass(int &curr); // recursively summarizes info about subtrees
+  // recursively summarizes info about subtrees
+  void ComputeCenterOfMass(int &curr);
   OctTreeNode** GetChildRef ARG(*, *) (int i);
   OctTreeNode* GetChild ARG(*, *) (int i);
 
@@ -154,7 +155,8 @@ public:
 
 private:
   //OctTreeInternalNode *link; // links all internal tree nodes so they can be recycled
-  static OctTreeInternalNode *head, *freelist; // free list for recycling
+  // free list for recycling
+  static OctTreeInternalNode *head, *freelist;
 
   int ChildID(OctTreeLeafNode * const b);
 
@@ -237,7 +239,8 @@ public:
   void ComputeForce(const OctTreeInternalNode * const root, const double size);
 
 private:
-  void RecurseForce(const OctTreeNode * const n, double dsq); // recursively walks the tree to compute the force on a body
+  // recursively walks the tree to compute the force on a body
+  void RecurseForce(const OctTreeNode * const n, double dsq);
 
   double velx;
   double vely;
@@ -541,8 +544,8 @@ void OctTreeInternalNode::InsertAll PARAM(Rb) (OctTreeLeafNode **b ARG(Rb, Rb), 
   //}
 }
 
-void OctTreeInternalNode::ComputeCenterOfMass(int &curr) // recursively summarizes info about subtrees
-{
+// Recursively summarizes info about subtrees
+void OctTreeInternalNode::ComputeCenterOfMass(int &curr) {
   double m, px = 0.0, py = 0.0, pz = 0.0;
   OctTreeNode *ch ARG(*, *);
 
@@ -552,13 +555,16 @@ void OctTreeInternalNode::ComputeCenterOfMass(int &curr) // recursively summariz
     //ch = child[i];
     ch = *GetChildRef(i);
     if (ch != 0) {
-      //child[i] = 0; // move non-NULL children to the front (needed to make other code faster)
+      //child[i] = 0;
       //child[j++] = ch;
-      *GetChildRef(i) = 0; // move non-NULL children to the front (needed to make other code faster)
+      // move non-NULL children to the front (needed to make other code faster)
+      *GetChildRef(i) = 0;
       *GetChildRef(j++) = ch;
 
       if (ch->type == BODY) {
-        bodies[curr++] = (OctTreeLeafNode *) ch; // sort bodies in tree order (approximation of putting nearby nodes together for locality)
+        // sort bodies in tree order (approximation of putting nearby nodes
+        // together for locality)
+        bodies[curr++] = (OctTreeLeafNode *) ch;
       } else {
         ((OctTreeInternalNode *) ch)->ComputeCenterOfMass(curr);
       }
@@ -576,8 +582,8 @@ void OctTreeInternalNode::ComputeCenterOfMass(int &curr) // recursively summariz
   posz = pz * m;
 }
 
-void OctTreeLeafNode::Advance() // advances a body's velocity and position by one time step
-{
+// Advances a body's velocity and position by one time step
+void OctTreeLeafNode::Advance() {
   double dvelx, dvely, dvelz;
   double velhx, velhy, velhz;
 
@@ -598,8 +604,8 @@ void OctTreeLeafNode::Advance() // advances a body's velocity and position by on
   velz = velhz + dvelz;
 }
 
-void OctTreeLeafNode::ComputeForce(const OctTreeInternalNode * const root, const double size) // computes the acceleration and velocity of a body
-{
+// Computes the acceleration and velocity of a body
+void OctTreeLeafNode::ComputeForce(const OctTreeInternalNode * const root, const double size) {
   double ax, ay, az;
 
   ax = accx;
@@ -619,8 +625,8 @@ void OctTreeLeafNode::ComputeForce(const OctTreeInternalNode * const root, const
   }
 }
 
-void OctTreeLeafNode::RecurseForce(const OctTreeNode * const n, double dsq) // recursively walks the tree to compute the force on a body
-{
+// Recursively walks the tree to compute the force on a body
+void OctTreeLeafNode::RecurseForce(const OctTreeNode * const n, double dsq) {
   double drx, dry, drz, drsq, nphi, scale, idr;
 
   drx = n->posx - posx;
@@ -680,7 +686,6 @@ void OctTreeLeafNode::RecurseForce(const OctTreeNode * const n, double dsq) // r
 static int nbodies; // number of bodies in system
 static int timesteps; // number of time steps to run
 static int grainSize; // number of parallel tasks
-
 
 static inline void ReadInput(char *filename) {
   double vx, vy, vz;
@@ -857,7 +862,9 @@ int main(int argc, char *argv[]) {
       local_root->InsertAll(bodies, nbodies, radius);
 
       int curr = 0;
-      local_root->ComputeCenterOfMass(curr); // summarize subtree info in each internal node (plus restructure tree and sort bodies for performance reasons)
+      // summarize subtree info in each internal node (plus restructure tree and
+      // sort bodies for performance reasons)
+      local_root->ComputeCenterOfMass(curr);
 
       root = local_root;
       gDiameter = diameter;
@@ -872,8 +879,10 @@ int main(int argc, char *argv[]) {
 
       OctTreeInternalNode::RecycleTree(); // recycle the tree
 
-      for (int i = 0; i < nbodies; i++) { // the iterations are independent: they can be executed in any order and in parallel
-        bodies[i]->Advance(); // advance the position and velocity of each body
+      // the iterations are independent: they can be executed in any order and in parallel
+      for (int i = 0; i < nbodies; i++) {
+        // advance the position and velocity of each body
+        bodies[i]->Advance();
       }
     } // end of time step
 
