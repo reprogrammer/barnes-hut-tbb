@@ -832,8 +832,10 @@ int main(int argc, char *argv[]) {
 
   bodies = 0;
 
-  if (argc == 3)
-    grainSize = atoi(argv[2]);
+  if (argc == 3) {
+    fprintf(stderr, "The support for grain size is turned off.\n");
+    //grainSize = atoi(argv[2]);
+  }
 
   timeval starttime, endtime;
   long runtime, lasttime, mintime;
