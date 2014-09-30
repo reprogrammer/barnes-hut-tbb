@@ -105,16 +105,16 @@ public:
   child4(0), child5(0), child6(0), child7(0) { }
 
   //static void NewNode PARAM(R) (OctTreeInternalNode * in ARG(R), double px, double py, double pz);
-  void copyFrom PARAM(Rn) (OctTreeInternalNode *node ARG(Rn)) {
+  void copyFrom PARAM(Rn) READS(Rn) WRITES(R) (OctTreeInternalNode *node ARG(Rn)) {
     type = node->type;
     mass = node->mass;
     posx = node->posx;
     posy = node->posy;
     posz = node->posz;
   }
-  static void RecycleTree() {
-    freelist = head;
-  }
+  //static void RecycleTree() {
+  //  freelist = head;
+  //}
 
 public:
   //void Insert(OctTreeLeafNode * const b, const double r); // builds the tree
@@ -122,7 +122,7 @@ public:
   // recursively summarizes info about subtrees
   void ComputeCenterOfMass(int &curr ARG(Global));
   OctTreeNode** GetChildRef ARG(*, *) (int i);
-  OctTreeNode* GetChild ARG(*, *) (int i);
+  OctTreeNode* GetChild ARG(*, *) READS(*) (int i);
 
   //OctTreeLeafNode **GetPartition(int i, OctTreeLeafNode **partition0,
   //  OctTreeLeafNode **partition1, OctTreeLeafNode **partition2,
@@ -143,7 +143,9 @@ public:
    OctTreeLeafNode **partition6 ARG(Rb:Rp6, Rb:Rp6),
    OctTreeLeafNode **partition7 ARG(Rb:Rp7, Rb:Rp7));
 
-  static void ChildIDToPos(int childID, double radius, double *x, double *y, double *z);
+  static void ChildIDToPos PARAM(Rx, Ry, Rz) WRITES(Rx, Ry, Rz)
+    (int childID, double radius, double *x ARG(Rx), double *y ARG(Ry), double *z ARG(Rz));
+
   OctTreeNode *child0 ARG(R:Rc0, R:Rc0);
   OctTreeNode *child1 ARG(R:Rc1, R:Rc1);
   OctTreeNode *child2 ARG(R:Rc2, R:Rc2);
@@ -158,11 +160,11 @@ private:
   // free list for recycling
   static OctTreeInternalNode *head, *freelist;
 
-  int ChildID(OctTreeLeafNode * const b);
+  int ChildID PARAM(Rb) READS(R, Rb) (OctTreeLeafNode *const b ARG(Rb));
 
   void Partition
-  PARAM(Rb)
-  (OctTreeLeafNode **b ARG(Rb, Rb), int n, int *partitionSize,
+  PARAM(Rb, Rps) WRITES(Rps)
+  (OctTreeLeafNode **b ARG(Rb, Rb), int n, int *partitionSize ARG(Rps),
   OctTreeLeafNode **partition0 ARG(Rb:Rp0, Rb:Rp0),
   OctTreeLeafNode **partition1 ARG(Rb:Rp1, Rb:Rp1),
   OctTreeLeafNode **partition2 ARG(Rb:Rp2, Rb:Rp2),
@@ -190,7 +192,7 @@ private:
 class PARAM(R) BASEARG(OctTreeNode, R)
 OctTreeLeafNode: public OctTreeNode {
 public:
-  OctTreeLeafNode() {
+  WRITES(R) OctTreeLeafNode() {
     type = BODY;
     mass = 0.0;
     posx = 0.0;
@@ -212,7 +214,7 @@ public:
   //OctTreeLeafNode(const OctTreeLeafNode& node) {
   //}
 
-  void copyFrom PARAM(Rn) (OctTreeLeafNode *node ARG(Rn)) {
+  void copyFrom PARAM(Rn) READS(Rn) WRITES(R) (OctTreeLeafNode *node ARG(Rn)) {
     type = node->type;
     mass = node->mass;
     posx = node->posx;
@@ -226,7 +228,7 @@ public:
     accz = node->accz;
   }
 
-  void setVelocity(const double x, const double y, const double z) {
+  void setVelocity WRITES(R) (const double x, const double y, const double z) {
     velx = x;
     vely = y;
     velz = z;
@@ -242,12 +244,12 @@ private:
   // recursively walks the tree to compute the force on a body
   void RecurseForce(const OctTreeNode * const n, double dsq);
 
-  double velx;
-  double vely;
-  double velz;
-  double accx;
-  double accy;
-  double accz;
+  double velx ARG(R);
+  double vely ARG(R);
+  double velz ARG(R);
+  double accx ARG(R);
+  double accy ARG(R);
+  double accz ARG(R);
 };
 
 OctTreeInternalNode *OctTreeInternalNode::head = 0;
@@ -275,8 +277,7 @@ void OctTreeInternalNode::NewNode PARAM(R) (OctTreeInternalNode * in ARG(R), dou
 }
 */
 
-int OctTreeInternalNode::ChildID(OctTreeLeafNode * const b)
-{
+int OctTreeInternalNode::ChildID /*PARAM(Rb)*/ READS(R, Rb) (OctTreeLeafNode *const b ARG(Rb)) {
   int i = 0;
 
   if (posx < b->posx) {
@@ -294,7 +295,8 @@ int OctTreeInternalNode::ChildID(OctTreeLeafNode * const b)
   return i;
 }
 
-void OctTreeInternalNode::ChildIDToPos(int childID, double radius, double *x, double *y, double *z) {
+void OctTreeInternalNode::ChildIDToPos /*PARAM(Rx, Ry, Rz)*/ WRITES(Rx, Ry, Rz)
+  (int childID, double radius, double *x ARG(Rx), double *y ARG(Ry), double *z ARG(Rz)) {
   *x = *y = *z = 0;
   if (childID >= 4) {
     *z = radius;
@@ -341,7 +343,7 @@ OctTreeNode** OctTreeInternalNode::GetChildRef ARG(*, *) (int i) {
   return childi;
 }
 
-OctTreeNode* OctTreeInternalNode::GetChild ARG(*, *) (int i) {
+OctTreeNode* OctTreeInternalNode::GetChild ARG(*, *) READS(*) (int i) {
   return *GetChildRef(i);
 }
 
@@ -423,8 +425,8 @@ PARAM(Rb)
 }
 
 void OctTreeInternalNode::Partition
-PARAM(Rb)
-(OctTreeLeafNode **b ARG(Rb, Rb), int n, int *partitionSize,
+/*PARAM(Rb, Rps)*/ WRITES(Rps)
+(OctTreeLeafNode **b ARG(Rb, Rb), int n, int *partitionSize ARG(Rps),
 OctTreeLeafNode **partition0 ARG(Rb:Rp0, Rb:Rp0),
 OctTreeLeafNode **partition1 ARG(Rb:Rp1, Rb:Rp1),
 OctTreeLeafNode **partition2 ARG(Rb:Rp2, Rb:Rp2),
@@ -884,7 +886,7 @@ int main(int argc, char *argv[]) {
         parallel_for(range, parallelProcessor);
       }
 
-      OctTreeInternalNode::RecycleTree(); // recycle the tree
+      //OctTreeInternalNode::RecycleTree(); // recycle the tree
 
       // the iterations are independent: they can be executed in any order and in parallel
       for (int i = 0; i < nbodies; i++) {
