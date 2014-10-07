@@ -118,7 +118,7 @@ public:
 
 public:
   //void Insert(OctTreeLeafNode * const b, const double r); // builds the tree
-  void InsertAll(OctTreeLeafNode **b, int n, double r);
+  void InsertAll PARAM(Rb) WRITES(Rb:*, R:*) (OctTreeLeafNode **b ARG(Rb, Rb), int n, double r);
   // recursively summarizes info about subtrees
   void ComputeCenterOfMass WRITES(*) (int &curr ARG(Global));
   OctTreeNode** GetChildRef ARG(*, *) (int i);
@@ -163,7 +163,7 @@ private:
   int ChildID PARAM(Rb) READS(R) READS(Rb) (OctTreeLeafNode *const b ARG(Rb));
 
   void Partition
-  PARAM(Rb, Rps) WRITES(Rps, Rb:*)
+  PARAM(Rb, Rps) READS(R) WRITES(Rps, Rb:*)
   (OctTreeLeafNode **b ARG(Rb, Rb), int n, int *partitionSize ARG(Rps),
   OctTreeLeafNode **partition0 ARG(Rb:Rp0, Rb:Rp0),
   OctTreeLeafNode **partition1 ARG(Rb:Rp1, Rb:Rp1),
@@ -174,10 +174,10 @@ private:
   OctTreeLeafNode **partition6 ARG(Rb:Rp6, Rb:Rp6),
   OctTreeLeafNode **partition7 ARG(Rb:Rp7, Rb:Rp7)); 
 
-
   void InsertChildren
   PARAM(Rp0, Rp1, Rp2, Rp3, Rp4, Rp5, Rp6, Rp7, Rps)
-  READS(R, Rps)
+  READS(Rps, Rp0, Rp1, Rp2, Rp3, Rp4, Rp5, Rp6, Rp7)
+  WRITES(R:*)
   (double r, int *partitionSize ARG(Rps),
   OctTreeLeafNode **partition0 ARG(Rp0, Rp0),
   OctTreeLeafNode **partition1 ARG(Rp1, Rp1),
@@ -236,10 +236,10 @@ public:
   }
 
   // advances a body's velocity and position by one time step
-  void Advance READS(R, Global) ();
+  void Advance READS(Global) WRITES(R) ();
 
   // computes the acceleration and velocity of a body
-  void ComputeForce READS(Global) WRITES(R) (const OctTreeInternalNode * const root, const double size);
+  void ComputeForce READS(*) WRITES(R) (const OctTreeInternalNode * const root, const double size);
 
 private:
   // recursively walks the tree to compute the force on a body
@@ -426,7 +426,7 @@ PARAM(Rb)
 }
 
 void OctTreeInternalNode::Partition
-/*PARAM(Rb, Rps)*/ WRITES(Rps, Rb:*)
+/*PARAM(Rb, Rps)*/ READS(R) WRITES(Rps, Rb:*)
 (OctTreeLeafNode **b ARG(Rb, Rb), int n, int *partitionSize ARG(Rps),
 OctTreeLeafNode **partition0 ARG(Rb:Rp0, Rb:Rp0),
 OctTreeLeafNode **partition1 ARG(Rb:Rp1, Rb:Rp1),
@@ -465,7 +465,7 @@ private:
 public:
   ChildrenInserter(double r, double posx, double posy, double posz, int childID, OctTreeLeafNode **partition ARG(Rp, Rp), int partitionSize, OctTreeNode **child ARG(Rc, Rc)): r(r), posx(posx), posy(posy), posz(posz), childID(childID), partition(partition), partitionSize(partitionSize), child(child) {}
 
-  void operator() READS(Rp) WRITES(Rc) () const {
+  void operator() WRITES(Rp:*, Rc:*) () const {
     if (partitionSize > 1) {
       double x, y, z;
       OctTreeInternalNode::ChildIDToPos(childID, r, &x, &y, &z);
@@ -484,7 +484,8 @@ public:
 
 void OctTreeInternalNode::InsertChildren
 //PARAM(Rp0, Rp1, Rp2, Rp3, Rp4, Rp5, Rp6, Rp7, Rps)
-READS(R, Rps)
+READS(Rps, Rp0, Rp1, Rp2, Rp3, Rp4, Rp5, Rp6, Rp7)
+WRITES(R:*)
 (double r, int *partitionSize ARG(Rps),
 OctTreeLeafNode **partition0 ARG(Rp0, Rp0),
 OctTreeLeafNode **partition1 ARG(Rp1, Rp1),
@@ -505,8 +506,7 @@ OctTreeLeafNode **partition7 ARG(Rp7, Rp7)) {
   parallel_invoke(inserter0, inserter1, inserter2, inserter3, inserter4, inserter5, inserter6, inserter7);
 }
 
-void OctTreeInternalNode::InsertAll PARAM(Rb) (OctTreeLeafNode **b ARG(Rb, Rb), int n, double r)
-{
+void OctTreeInternalNode::InsertAll /*PARAM(Rb)*/ WRITES(Rb:*, R:*) (OctTreeLeafNode **b ARG(Rb, Rb), int n, double r) {
 #ifdef DEBUG
   cout << "InsertAll(*this = " << *this << ", n = " << n << ", r = " << r << ")" << endl;
 #endif
@@ -532,11 +532,9 @@ void OctTreeInternalNode::InsertAll PARAM(Rb) (OctTreeLeafNode **b ARG(Rb, Rb), 
   partition6 = new OctTreeLeafNode*[n];
   partition7 = new OctTreeLeafNode*[n];
   Partition(b, n, partitionSize, partition0, partition1, partition2,
-      partition3, partition4, partition5, partition6,
-      partition7);
+      partition3, partition4, partition5, partition6, partition7);
   InsertChildren(r, partitionSize, partition0, partition1, partition2,
-      partition3, partition4, partition5, partition6,
-      partition7);
+      partition3, partition4, partition5, partition6, partition7);
   //for (int i = 0; i < 8; ++i) {
   //  delete partition[i];
   //}
@@ -587,7 +585,7 @@ void OctTreeInternalNode::ComputeCenterOfMass WRITES(*) (int &curr ARG(Global)) 
 }
 
 // Advances a body's velocity and position by one time step
-void OctTreeLeafNode::Advance READS(R, Global) () {
+void OctTreeLeafNode::Advance READS(Global) WRITES(R) () {
   double dvelx, dvely, dvelz;
   double velhx, velhy, velhz;
 
@@ -609,7 +607,7 @@ void OctTreeLeafNode::Advance READS(R, Global) () {
 }
 
 // Computes the acceleration and velocity of a body
-void OctTreeLeafNode::ComputeForce READS(Global) WRITES(R) (const OctTreeInternalNode * const root, const double size) {
+void OctTreeLeafNode::ComputeForce READS(*) WRITES(R) (const OctTreeInternalNode * const root, const double size) {
   double ax, ay, az;
 
   ax = accx;
@@ -815,14 +813,14 @@ static double gDiameter;
 
 class ParallelForProcessor {
 public:
-  void operator() WRITES(Global) (const blocked_range<int>& range) const {
+  void operator() READS(*) WRITES(Global) (const blocked_range<int>& range) const {
     for (int i = range.begin(); i != range.end(); i++) {
       bodies[i]->ComputeForce(root, gDiameter);
     }
   }
 };
 
-int main WRITES(Global) (int argc, char *argv[]) {
+int main WRITES(*) (int argc, char **argv ARG(Global, Global)) {
   //task_scheduler_init init;
   ParallelForProcessor parallelProcessor;
 
