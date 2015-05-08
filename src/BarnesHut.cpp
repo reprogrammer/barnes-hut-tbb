@@ -37,9 +37,19 @@
 //#include "tbb/blocked_range.h"
 //#include "tbb/parallel_for.h"
 //#include "tbb/parallel_invoke.h"
-#include "../include/blocked_range.h"
-#include "../include/parallel_for.h"
-#include "../include/parallel_invoke.h"
+#include "../../include/blocked_range.h"
+//#include "../../include/parallel_for.h"
+//#include "../../include/parallel_invoke.h"
+
+namespace tbb {
+    template<typename Func0, typename Func1, typename Func2, typename Func3,
+             typename Func4, typename Func5, typename Func6, typename Func7>
+    void parallel_invoke[[asap::param("P0, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15")]]
+                        (const Func0 &F0 ARG(P0, P1), const Func1 &F1 ARG(P2, P3), const Func2 &F2 ARG(P4, P5), const Func3 &F3 ARG(P6, P7),
+                         const Func4 &F4 ARG(P8, P9), const Func5 &F5 ARG(P10, P11), const Func6 &F6 ARG(P12, P13), const Func7 &F7 ARG(P14, P15));
+
+} // end namespace
+
 
 //#include "tbb/task_scheduler_init.h"
 //#include "tbb/task_group.h"
@@ -65,22 +75,22 @@ class OctTreeLeafNode;
 static OctTreeLeafNode **bodies; // the n bodies
 
 
-class PARAM(R) OctTreeNode {
+class PARAM(PN) OctTreeNode {
 public:
-  int type ARG(R); // CELL or BODY
-  double mass ARG(R);
-  double posx ARG(R);
-  double posy ARG(R);
-  double posz ARG(R);
+  int type ARG(PN); // CELL or BODY
+  double mass ARG(PN);
+  double posx ARG(PN);
+  double posy ARG(PN);
+  double posz ARG(PN);
 
-  OctTreeNode(int type, double mass, double posx, double posy, double posz) : type(type), mass(mass), posx(posx), posy(posy), posz(posz) {}
+  OctTreeNode(int type, double mass, double posx, double posy, double posz) : type(type), mass(mass), posx(posx), posy(posy), posz(posz) {} // expected-warning{{Inferred Effect Summary for OctTreeNode: [reads(rpl([rLOCAL],[]))]}}
 
   OctTreeNode() : type(0), mass(0), posx(0), posy(0), posz(0) {}
 
 #ifdef DEBUG
   friend std::ostream& operator<<(std::ostream &stream, const OctTreeNode &node);
 #endif
-};
+}; // end class OctTreeNode
 
 #ifdef DEBUG
 std::ostream &operator<<(std::ostream &stream, const OctTreeNode &node) {
@@ -95,17 +105,17 @@ class
 REGION(
 Rc0, Rc1, Rc2, Rc3, Rc4, Rc5, Rc6, Rc7,
 Rp0, Rp1, Rp2, Rp3, Rp4, Rp5, Rp6, Rp7)
-PARAM(R)
-BASEARG(OctTreeNode, R)
+PARAM(PiN)
+BASEARG(OctTreeNode, PiN)
 OctTreeInternalNode: public OctTreeNode {
 public:
 
   OctTreeInternalNode(double posx, double posy, double posz) : OctTreeNode(CELL,
       0, posx, posy, posz), child0(0), child1(0), child2(0), child3(0),
-  child4(0), child5(0), child6(0), child7(0) { }
+  child4(0), child5(0), child6(0), child7(0) { }  // expected-warning{{Inferred Effect Summary for OctTreeInternalNode: [reads(rpl([rLOCAL],[]))]}}
 
   //static void NewNode PARAM(R) (OctTreeInternalNode * in ARG(R), double px, double py, double pz);
-  void copyFrom PARAM(Rn) WRITES(R) READS(Rn) (OctTreeInternalNode *node ARG(Rn)) {
+  void copyFrom PARAM(Rn) WRITES(PiN) READS(Rn) (OctTreeInternalNode *node ARG(Rn)) { // expected-warning{{Inferred Effect Summary for copyFrom: [reads(rpl([p51_Rn],[])),reads(rpl([rLOCAL],[])),writes(rpl([p50_PiN],[]))]}}
     type = node->type;
     mass = node->mass;
     posx = node->posx;
@@ -118,7 +128,7 @@ public:
 
 public:
   //void Insert(OctTreeLeafNode * const b, const double r); // builds the tree
-  void InsertAll PARAM(Rb) WRITES(Rb:*, R:*) (OctTreeLeafNode **b ARG(Rb, Rb), int n, double r);
+  void InsertAll PARAM(Rb) WRITES(Rb:*, PiN:*) (OctTreeLeafNode **b ARG(Rb, Rb), int n, double r);
   // recursively summarizes info about subtrees
   void ComputeCenterOfMass WRITES(*) (int &curr ARG(Global));
   OctTreeNode** GetChildRef ARG(*, *) (int i);
@@ -146,24 +156,24 @@ public:
   static void ChildIDToPos PARAM(Rx, Ry, Rz) WRITES(Rx, Ry, Rz)
     (int childID, double radius, double *x ARG(Rx), double *y ARG(Ry), double *z ARG(Rz));
 
-  OctTreeNode *child0 ARG(R:Rc0, R:Rc0);
-  OctTreeNode *child1 ARG(R:Rc1, R:Rc1);
-  OctTreeNode *child2 ARG(R:Rc2, R:Rc2);
-  OctTreeNode *child3 ARG(R:Rc3, R:Rc3);
-  OctTreeNode *child4 ARG(R:Rc4, R:Rc4);
-  OctTreeNode *child5 ARG(R:Rc5, R:Rc5);
-  OctTreeNode *child6 ARG(R:Rc6, R:Rc6);
-  OctTreeNode *child7 ARG(R:Rc7, R:Rc7);
+  OctTreeNode *child0 ARG(PiN:Rc0, PiN:Rc0);
+  OctTreeNode *child1 ARG(PiN:Rc1, PiN:Rc1);
+  OctTreeNode *child2 ARG(PiN:Rc2, PiN:Rc2);
+  OctTreeNode *child3 ARG(PiN:Rc3, PiN:Rc3);
+  OctTreeNode *child4 ARG(PiN:Rc4, PiN:Rc4);
+  OctTreeNode *child5 ARG(PiN:Rc5, PiN:Rc5);
+  OctTreeNode *child6 ARG(PiN:Rc6, PiN:Rc6);
+  OctTreeNode *child7 ARG(PiN:Rc7, PiN:Rc7);
 
 private:
   //OctTreeInternalNode *link; // links all internal tree nodes so they can be recycled
   // free list for recycling
   static OctTreeInternalNode *head, *freelist;
 
-  int ChildID PARAM(Rb) READS(R) READS(Rb) (OctTreeLeafNode *const b ARG(Rb));
+  int ChildID PARAM(Rb) READS(PiN, Rb) (OctTreeLeafNode *const b ARG(Rb));
 
   void Partition
-  PARAM(Rb, Rps) READS(R) WRITES(Rps, Rb:*)
+  PARAM(Rb, Rps) READS(PiN) WRITES(Rps, Rb:*)
   (OctTreeLeafNode **b ARG(Rb, Rb), int n, int *partitionSize ARG(Rps),
   OctTreeLeafNode **partition0 ARG(Rb:Rp0, Rb:Rp0),
   OctTreeLeafNode **partition1 ARG(Rb:Rp1, Rb:Rp1),
@@ -175,25 +185,25 @@ private:
   OctTreeLeafNode **partition7 ARG(Rb:Rp7, Rb:Rp7)); 
 
   void InsertChildren
-  PARAM(Rp0, Rp1, Rp2, Rp3, Rp4, Rp5, Rp6, Rp7, Rps)
-  READS(Rps, Rp0, Rp1, Rp2, Rp3, Rp4, Rp5, Rp6, Rp7)
-  WRITES(R:*)
-  (double r, int *partitionSize ARG(Rps),
-  OctTreeLeafNode **partition0 ARG(Rp0, Rp0),
-  OctTreeLeafNode **partition1 ARG(Rp1, Rp1),
-  OctTreeLeafNode **partition2 ARG(Rp2, Rp2),
-  OctTreeLeafNode **partition3 ARG(Rp3, Rp3),
-  OctTreeLeafNode **partition4 ARG(Rp4, Rp4),
-  OctTreeLeafNode **partition5 ARG(Rp5, Rp5),
-  OctTreeLeafNode **partition6 ARG(Rp6, Rp6),
-  OctTreeLeafNode **partition7 ARG(Rp7, Rp7));
-};
+  PARAM(Pp0, Pp1, Pp2, Pp3, Pp4, Pp5, Pp6, Pp7, Pps)
+  READS(Pps)
+  WRITES(PiN:*, Pp0:*, Pp1:*, Pp2:*, Pp3:*, Pp4:*, Pp5:*, Pp6:*, Pp7:*)
+  (double r, int *partitionSize ARG(Pps),
+  OctTreeLeafNode **partition0 ARG(Pp0, Pp0),
+  OctTreeLeafNode **partition1 ARG(Pp1, Pp1),
+  OctTreeLeafNode **partition2 ARG(Pp2, Pp2),
+  OctTreeLeafNode **partition3 ARG(Pp3, Pp3),
+  OctTreeLeafNode **partition4 ARG(Pp4, Pp4),
+  OctTreeLeafNode **partition5 ARG(Pp5, Pp5),
+  OctTreeLeafNode **partition6 ARG(Pp6, Pp6),
+  OctTreeLeafNode **partition7 ARG(Pp7, Pp7));
+}; // end class OctTreeInternalNode
 
 // the tree leaves are the bodies
 class PARAM(R) BASEARG(OctTreeNode, R)
 OctTreeLeafNode: public OctTreeNode {
 public:
-  WRITES(R) OctTreeLeafNode() {
+  WRITES(R) OctTreeLeafNode() {  // expected-warning{{Inferred Effect Summary for OctTreeLeafNode: [writes(rpl([p69_R],[]))]:}}
     type = BODY;
     mass = 0.0;
     posx = 0.0;
@@ -210,12 +220,12 @@ public:
   OctTreeLeafNode(int type, double mass, double posx, double posy, double posz,
       double velx, double vely, double velz, double accx, double accy, double
       accz) : OctTreeNode(type, mass, posx, posy, posz), velx(velx), vely(vely),
-  velz(velz), accx(accx), accy(accy), accz(accz) {}
+  velz(velz), accx(accx), accy(accy), accz(accz) {} // expected-warning{{Inferred Effect Summary for OctTreeLeafNode: [reads(rpl([rLOCAL],[]))]:}}
 
   //OctTreeLeafNode(const OctTreeLeafNode& node) {
   //}
 
-  void copyFrom PARAM(Rn) READS(Rn) WRITES(R) (OctTreeLeafNode *node ARG(Rn)) {
+  void copyFrom PARAM(Rn) READS(Rn) WRITES(R) (OctTreeLeafNode *node ARG(Rn)) { // expected-warning{{Inferred Effect Summary for copyFrom: [reads(rpl([p70_Rn],[])),reads(rpl([rLOCAL],[])),writes(rpl([p69_R],[]))]}}
     type = node->type;
     mass = node->mass;
     posx = node->posx;
@@ -229,7 +239,7 @@ public:
     accz = node->accz;
   }
 
-  void setVelocity WRITES(R) (const double x, const double y, const double z) {
+  void setVelocity WRITES(R) (const double x, const double y, const double z) { // expected-warning{{Inferred Effect Summary for setVelocity: [reads(rpl([rLOCAL],[])),writes(rpl([p69_R],[]))]:}}
     velx = x;
     vely = y;
     velz = z;
@@ -251,7 +261,7 @@ private:
   double accx ARG(R);
   double accy ARG(R);
   double accz ARG(R);
-};
+}; // end class OctTreeLeafNode
 
 OctTreeInternalNode *OctTreeInternalNode::head = 0;
 OctTreeInternalNode *OctTreeInternalNode::freelist = 0;
@@ -278,7 +288,7 @@ void OctTreeInternalNode::NewNode PARAM(R) (OctTreeInternalNode * in ARG(R), dou
 }
 */
 
-int OctTreeInternalNode::ChildID /*PARAM(Rb)*/ READS(R, Rb) (OctTreeLeafNode *const b ARG(Rb)) {
+int OctTreeInternalNode::ChildID /*PARAM(Rb) READS(PiN, Rb)*/ (OctTreeLeafNode *const b ARG(Rb)) { // expected-warning{{Inferred Effect Summary for ChildID: [reads(rpl([p50_PiN],[])),reads(rpl([p57_Rb],[])),writes(rpl([rLOCAL],[]))]}}
   int i = 0;
 
   if (posx < b->posx) {
@@ -297,7 +307,7 @@ int OctTreeInternalNode::ChildID /*PARAM(Rb)*/ READS(R, Rb) (OctTreeLeafNode *co
 }
 
 void OctTreeInternalNode::ChildIDToPos /*PARAM(Rx, Ry, Rz)*/ WRITES(Rx, Ry, Rz)
-  (int childID, double radius, double *x ARG(Rx), double *y ARG(Ry), double *z ARG(Rz)) {
+  (int childID, double radius, double *x ARG(Rx), double *y ARG(Ry), double *z ARG(Rz)) { // expected-warning{{Inferred Effect Summary for ChildIDToPos: [writes(rpl([p54_Rx],[])),writes(rpl([p55_Ry],[])),writes(rpl([p56_Rz],[])),writes(rpl([rLOCAL],[]))]}}
   *x = *y = *z = 0;
   if (childID >= 4) {
     *z = radius;
@@ -309,11 +319,11 @@ void OctTreeInternalNode::ChildIDToPos /*PARAM(Rx, Ry, Rz)*/ WRITES(Rx, Ry, Rz)
   }
   if (childID >= 1) {
     *x = radius;
-    childID -= 1;
+    // childID -= 1;
   }
 }
 
-OctTreeNode** OctTreeInternalNode::GetChildRef ARG(*, *) (int i) {
+OctTreeNode** OctTreeInternalNode::GetChildRef ARG(*, *) (int i) { // expected-warning{{Inferred Effect Summary for GetChildRef: [writes(rpl([rLOCAL],[]))]:}}
   OctTreeNode **childi ARG(Local, *, *) = 0;
   switch (i) {
     case 0:
@@ -344,7 +354,7 @@ OctTreeNode** OctTreeInternalNode::GetChildRef ARG(*, *) (int i) {
   return childi;
 }
 
-OctTreeNode* OctTreeInternalNode::GetChild ARG(*, *) READS(*) (int i) {
+OctTreeNode* OctTreeInternalNode::GetChild ARG(*, *) READS(*) (int i) { // expected-warning{{Inferred Effect Summary for GetChild: [reads(rpl([rSTAR],[])),writes(rpl([rLOCAL],[]))]}}
   return *GetChildRef(i);
 }
 
@@ -385,7 +395,7 @@ void OctTreeInternalNode::Insert(OctTreeLeafNode * const b, const double r) // b
 
 OctTreeLeafNode **OctTreeInternalNode::GetPartition
 ARG(Rb:*, Rb:*)
-PARAM(Rb)
+/*PARAM(Rb)*/
 (OctTreeLeafNode **b ARG(Rb, Rb), int i,
  OctTreeLeafNode **partition0 ARG(Rb:Rp0, Rb:Rp0),
  OctTreeLeafNode **partition1 ARG(Rb:Rp1, Rb:Rp1),
@@ -394,7 +404,7 @@ PARAM(Rb)
  OctTreeLeafNode **partition4 ARG(Rb:Rp4, Rb:Rp4),
  OctTreeLeafNode **partition5 ARG(Rb:Rp5, Rb:Rp5),
  OctTreeLeafNode **partition6 ARG(Rb:Rp6, Rb:Rp6),
- OctTreeLeafNode **partition7 ARG(Rb:Rp7, Rb:Rp7)) {
+ OctTreeLeafNode **partition7 ARG(Rb:Rp7, Rb:Rp7)) { // expected-warning{{Inferred Effect Summary for GetPartition: [writes(rpl([rLOCAL],[]))]}}
   OctTreeLeafNode **partitioni ARG(Local, Rb:*, Rb:*) = 0;
   switch (i) {
     case 0:
@@ -426,7 +436,7 @@ PARAM(Rb)
 }
 
 void OctTreeInternalNode::Partition
-/*PARAM(Rb, Rps)*/ READS(R) WRITES(Rps, Rb:*)
+/*PARAM(Rb, Rps) READS(PiN) WRITES(Rps, Rb:*) */
 (OctTreeLeafNode **b ARG(Rb, Rb), int n, int *partitionSize ARG(Rps),
 OctTreeLeafNode **partition0 ARG(Rb:Rp0, Rb:Rp0),
 OctTreeLeafNode **partition1 ARG(Rb:Rp1, Rb:Rp1),
@@ -435,7 +445,7 @@ OctTreeLeafNode **partition3 ARG(Rb:Rp3, Rb:Rp3),
 OctTreeLeafNode **partition4 ARG(Rb:Rp4, Rb:Rp4),
 OctTreeLeafNode **partition5 ARG(Rb:Rp5, Rb:Rp5),
 OctTreeLeafNode **partition6 ARG(Rb:Rp6, Rb:Rp6),
-OctTreeLeafNode **partition7 ARG(Rb:Rp7, Rb:Rp7)) {
+OctTreeLeafNode **partition7 ARG(Rb:Rp7, Rb:Rp7)) { // expected-warning{{Inferred Effect Summary for Partition: [reads(rpl([p50_PiN],[])),writes(rpl([p58_Rb,rSTAR],[])),writes(rpl([p59_Rps],[])),writes(rpl([rLOCAL],[]))]}}
   for (int i = 0; i < 8; ++i) {
     partitionSize[i] = 0;
   }
@@ -463,9 +473,10 @@ private:
   OctTreeNode **child ARG(Rc, Rc, Rc);
 
 public:
-  ChildrenInserter(double r, double posx, double posy, double posz, int childID, OctTreeLeafNode **partition ARG(Rp, Rp), int partitionSize, OctTreeNode **child ARG(Rc, Rc)): r(r), posx(posx), posy(posy), posz(posz), childID(childID), partition(partition), partitionSize(partitionSize), child(child) {}
+  ChildrenInserter(double r, double posx, double posy, double posz, int childID, OctTreeLeafNode **partition ARG(Rp, Rp), int partitionSize, OctTreeNode **child ARG(Rc, Rc))
+                  : r(r), posx(posx), posy(posy), posz(posz), childID(childID), partition(partition), partitionSize(partitionSize), child(child) {}  // expected-warning{{Inferred Effect Summary for ChildrenInserter: [reads(rpl([rLOCAL],[]))]}}
 
-  void operator() WRITES(Rp:*, Rc:*) () const {
+  void operator() WRITES(Rp:*, Rc:*) () const { // expected-warning{{Inferred Effect Summary for operator(): [writes(rpl([p71_Rp,rSTAR],[])),writes(rpl([p72_Rc,rSTAR],[])),writes(rpl([rLOCAL],[]))]}}
     if (partitionSize > 1) {
       double x, y, z;
       OctTreeInternalNode::ChildIDToPos(childID, r, &x, &y, &z);
@@ -476,37 +487,41 @@ public:
       cell->InsertAll(partition, partitionSize, rh);
     } else if (partitionSize == 1) {
       //*child = partition[0];
+      OctTreeLeafNode *leaf ARG(Rc) = new OctTreeLeafNode();
+      leaf->copyFrom(partition[0]);
+      *child = leaf;
+      /*
       *child = new OctTreeLeafNode();
-      ((OctTreeLeafNode *) (*child))->copyFrom(partition[0]);
+      ((OctTreeLeafNode *) (*child))->copyFrom(partition[0]);*/
     }
   }
-};
+}; // end class ChildrenInserter
 
 void OctTreeInternalNode::InsertChildren
-//PARAM(Rp0, Rp1, Rp2, Rp3, Rp4, Rp5, Rp6, Rp7, Rps)
-READS(Rps, Rp0, Rp1, Rp2, Rp3, Rp4, Rp5, Rp6, Rp7)
-WRITES(R:*)
-(double r, int *partitionSize ARG(Rps),
-OctTreeLeafNode **partition0 ARG(Rp0, Rp0),
-OctTreeLeafNode **partition1 ARG(Rp1, Rp1),
-OctTreeLeafNode **partition2 ARG(Rp2, Rp2),
-OctTreeLeafNode **partition3 ARG(Rp3, Rp3),
-OctTreeLeafNode **partition4 ARG(Rp4, Rp4),
-OctTreeLeafNode **partition5 ARG(Rp5, Rp5),
-OctTreeLeafNode **partition6 ARG(Rp6, Rp6),
-OctTreeLeafNode **partition7 ARG(Rp7, Rp7)) {
-  ChildrenInserter inserter0 ARG(Rp0, R:Rc0) (r, posx, posy, posz, 0, partition0, partitionSize[0], &child0);
-  ChildrenInserter inserter1 ARG(Rp1, R:Rc1) (r, posx, posy, posz, 1, partition1, partitionSize[1], &child1);
-  ChildrenInserter inserter2 ARG(Rp2, R:Rc2) (r, posx, posy, posz, 2, partition2, partitionSize[2], &child2);
-  ChildrenInserter inserter3 ARG(Rp3, R:Rc3) (r, posx, posy, posz, 3, partition3, partitionSize[3], &child3);
-  ChildrenInserter inserter4 ARG(Rp4, R:Rc4) (r, posx, posy, posz, 4, partition4, partitionSize[4], &child4);
-  ChildrenInserter inserter5 ARG(Rp5, R:Rc5) (r, posx, posy, posz, 5, partition5, partitionSize[5], &child5);
-  ChildrenInserter inserter6 ARG(Rp6, R:Rc6) (r, posx, posy, posz, 6, partition6, partitionSize[6], &child6);
-  ChildrenInserter inserter7 ARG(Rp7, R:Rc7) (r, posx, posy, posz, 7, partition7, partitionSize[7], &child7);
+//PARAM(Pp0, Pp1, Pp2, Pp3, Pp4, Pp5, Pp6, Pp7, Pps)
+//READS(Pps)
+//WRITES(PiN:*, Pp0:*, Pp1:*, Pp2:*, Pp3:*, Pp4:*, Pp5:*, Pp6:*, Pp7:*)
+(double r, int *partitionSize ARG(Pps),
+OctTreeLeafNode **partition0 ARG(Pp0, Pp0),
+OctTreeLeafNode **partition1 ARG(Pp1, Pp1),
+OctTreeLeafNode **partition2 ARG(Pp2, Pp2),
+OctTreeLeafNode **partition3 ARG(Pp3, Pp3),
+OctTreeLeafNode **partition4 ARG(Pp4, Pp4),
+OctTreeLeafNode **partition5 ARG(Pp5, Pp5),
+OctTreeLeafNode **partition6 ARG(Pp6, Pp6),
+OctTreeLeafNode **partition7 ARG(Pp7, Pp7)) { // expected-warning{{Inferred Effect Summary for InsertChildren: [reads(rpl([p50_PiN],[])),reads(rpl([p68_Pps],[])),writes(rpl([p50_PiN,r0_Rc0,rSTAR],[])),writes(rpl([p50_PiN,r1_Rc1,rSTAR],[])),writes(rpl([p50_PiN,r2_Rc2,rSTAR],[])),writes(rpl([p50_PiN,r3_Rc3,rSTAR],[])),writes(rpl([p50_PiN,r4_Rc4,rSTAR],[])),writes(rpl([p50_PiN,r5_Rc5,rSTAR],[])),writes(rpl([p50_PiN,r6_Rc6,rSTAR],[])),writes(rpl([p50_PiN,r7_Rc7,rSTAR],[])),writes(rpl([p60_Pp0,rSTAR],[])),writes(rpl([p61_Pp1,rSTAR],[])),writes(rpl([p62_Pp2,rSTAR],[])),writes(rpl([p63_Pp3,rSTAR],[])),writes(rpl([p64_Pp4,rSTAR],[])),writes(rpl([p65_Pp5,rSTAR],[])),writes(rpl([p66_Pp6,rSTAR],[])),writes(rpl([p67_Pp7,rSTAR],[])),writes(rpl([rLOCAL],[]))]}}
+  ChildrenInserter inserter0 ARG(Pp0, PiN:Rc0) (r, posx, posy, posz, 0, partition0, partitionSize[0], &child0);
+  ChildrenInserter inserter1 ARG(Pp1, PiN:Rc1) (r, posx, posy, posz, 1, partition1, partitionSize[1], &child1);
+  ChildrenInserter inserter2 ARG(Pp2, PiN:Rc2) (r, posx, posy, posz, 2, partition2, partitionSize[2], &child2);
+  ChildrenInserter inserter3 ARG(Pp3, PiN:Rc3) (r, posx, posy, posz, 3, partition3, partitionSize[3], &child3);
+  ChildrenInserter inserter4 ARG(Pp4, PiN:Rc4) (r, posx, posy, posz, 4, partition4, partitionSize[4], &child4);
+  ChildrenInserter inserter5 ARG(Pp5, PiN:Rc5) (r, posx, posy, posz, 5, partition5, partitionSize[5], &child5);
+  ChildrenInserter inserter6 ARG(Pp6, PiN:Rc6) (r, posx, posy, posz, 6, partition6, partitionSize[6], &child6);
+  ChildrenInserter inserter7 ARG(Pp7, PiN:Rc7) (r, posx, posy, posz, 7, partition7, partitionSize[7], &child7);
   parallel_invoke(inserter0, inserter1, inserter2, inserter3, inserter4, inserter5, inserter6, inserter7);
 }
 
-void OctTreeInternalNode::InsertAll /*PARAM(Rb)*/ WRITES(Rb:*, R:*) (OctTreeLeafNode **b ARG(Rb, Rb), int n, double r) {
+void OctTreeInternalNode::InsertAll /*PARAM(Rb) WRITES(Rb:*, PiN:*) */(OctTreeLeafNode **b ARG(Rb, Rb), int n, double r) { // expected-warning{{Inferred Effect Summary for InsertAll: [reads(rpl([p50_PiN],[])),writes(rpl([p50_PiN,r0_Rc0,rSTAR],[])),writes(rpl([p50_PiN,r1_Rc1,rSTAR],[])),writes(rpl([p50_PiN,r2_Rc2,rSTAR],[])),writes(rpl([p50_PiN,r3_Rc3,rSTAR],[])),writes(rpl([p50_PiN,r4_Rc4,rSTAR],[])),writes(rpl([p50_PiN,r5_Rc5,rSTAR],[])),writes(rpl([p50_PiN,r6_Rc6,rSTAR],[])),writes(rpl([p50_PiN,r7_Rc7,rSTAR],[])),writes(rpl([p52_Rb,rSTAR],[])),writes(rpl([rLOCAL],[]))]}}
 #ifdef DEBUG
   cout << "InsertAll(*this = " << *this << ", n = " << n << ", r = " << r << ")" << endl;
 #endif
@@ -547,7 +562,7 @@ void OctTreeInternalNode::InsertAll /*PARAM(Rb)*/ WRITES(Rb:*, R:*) (OctTreeLeaf
 }
 
 // Recursively summarizes info about subtrees
-void OctTreeInternalNode::ComputeCenterOfMass WRITES(*) (int &curr ARG(Global)) {
+void OctTreeInternalNode::ComputeCenterOfMass WRITES(*) (int &curr ARG(Global)) { // expected-warning{{Inferred Effect Summary for ComputeCenterOfMass: [writes(rpl([rSTAR],[]))]}}
   double m, px = 0.0, py = 0.0, pz = 0.0;
   OctTreeNode *ch ARG(*, *);
 
@@ -585,7 +600,7 @@ void OctTreeInternalNode::ComputeCenterOfMass WRITES(*) (int &curr ARG(Global)) 
 }
 
 // Advances a body's velocity and position by one time step
-void OctTreeLeafNode::Advance READS(Global) WRITES(R) () {
+void OctTreeLeafNode::Advance READS(Global) WRITES(R) () { // expected-warning{{Inferred Effect Summary for Advance: [reads(rpl([rGLOBAL],[])),writes(rpl([p69_R],[])),writes(rpl([rLOCAL],[]))]}}
   double dvelx, dvely, dvelz;
   double velhx, velhy, velhz;
 
@@ -607,7 +622,7 @@ void OctTreeLeafNode::Advance READS(Global) WRITES(R) () {
 }
 
 // Computes the acceleration and velocity of a body
-void OctTreeLeafNode::ComputeForce READS(*) WRITES(R) (const OctTreeInternalNode * const root, const double size) {
+void OctTreeLeafNode::ComputeForce READS(*) WRITES(R) (const OctTreeInternalNode * const root, const double size) { // expected-warning{{Inferred Effect Summary for ComputeForce: [reads(rpl([rSTAR],[])),writes(rpl([p69_R],[])),writes(rpl([rLOCAL],[]))]}}
   double ax, ay, az;
 
   ax = accx;
@@ -628,7 +643,7 @@ void OctTreeLeafNode::ComputeForce READS(*) WRITES(R) (const OctTreeInternalNode
 }
 
 // Recursively walks the tree to compute the force on a body
-void OctTreeLeafNode::RecurseForce READS(*) WRITES(R) (const OctTreeNode * const n, double dsq) {
+void OctTreeLeafNode::RecurseForce READS(*) WRITES(R) (const OctTreeNode * const n, double dsq) { // expected-warning{{Inferred Effect Summary for RecurseForce: [reads(rpl([rSTAR],[])),writes(rpl([p69_R],[])),writes(rpl([rLOCAL],[]))]}}
   double drx, dry, drz, drsq, nphi, scale, idr;
 
   drx = n->posx - posx;
@@ -689,7 +704,7 @@ static int nbodies; // number of bodies in system
 static int timesteps; // number of time steps to run
 static int grainSize; // number of parallel tasks
 
-static inline int ReadInput WRITES(Global) (char *filename) {
+static inline int ReadInput WRITES(Global) (char *filename) { // expected-warning{{Inferred Effect Summary for ReadInput: [writes(rpl([rGLOBAL],[])),writes(rpl([rLOCAL],[]))]}}
   double vx, vy, vz;
   FILE *f ARG(Local, *);
 
@@ -741,7 +756,7 @@ static inline int ReadInput WRITES(Global) (char *filename) {
 
 static inline void ComputeCenterAndDiameter WRITES(Global)
   (const int n, double &diameter ARG(Global), double &centerx ARG(Global),
-   double &centery ARG(Global), double &centerz ARG(Global)) {
+   double &centery ARG(Global), double &centerz ARG(Global)) { // expected-warning{{Inferred Effect Summary for ComputeCenterAndDiameter: [writes(rpl([rGLOBAL],[])),writes(rpl([rLOCAL],[]))]}}
   double minx, miny, minz;
   double maxx, maxy, maxz;
   double posx, posy, posz;
@@ -784,13 +799,13 @@ static inline void ComputeCenterAndDiameter WRITES(Global)
   centerz = (maxz + minz) * 0.5;
 }
 
-static inline int min(long a, long b) {
+static inline int min(long a, long b) { // expected-warning{{Inferred Effect Summary for min: [writes(rpl([rLOCAL],[]))]}}
   if (a < b)
     a = b;
   return a;
 }
 
-static void PrintDouble(double d) {
+static void PrintDouble(double d) { // expected-warning{{Inferred Effect Summary for PrintDouble: [writes(rpl([rLOCAL],[]))]}}
   int i;
   char str[16];
 
@@ -813,14 +828,14 @@ static double gDiameter;
 
 class ParallelForProcessor {
 public:
-  void operator() READS(*) WRITES(Global) (const blocked_range<int>& range) const {
+  void operator() READS(*) WRITES(Global) (const blocked_range<int>& range) const { // expected-warning{{Inferred Effect Summary for operator(): [reads(rpl([rSTAR],[])),writes(rpl([rGLOBAL],[])),writes(rpl([rLOCAL],[]))]}}
     for (int i = range.begin(); i != range.end(); i++) {
       bodies[i]->ComputeForce(root, gDiameter);
     }
   }
 };
 
-int main WRITES(*) (int argc, char **argv ARG(Global, Global)) {
+int main WRITES(*) (int argc, char **argv ARG(Global, Global)) { // expected-warning{{Inferred Effect Summary for main: [writes(rpl([rGLOBAL,r0_Rc0,rSTAR],[])),writes(rpl([rGLOBAL,r1_Rc1,rSTAR],[])),writes(rpl([rGLOBAL,r2_Rc2,rSTAR],[])),writes(rpl([rGLOBAL,r3_Rc3,rSTAR],[])),writes(rpl([rGLOBAL,r4_Rc4,rSTAR],[])),writes(rpl([rGLOBAL,r5_Rc5,rSTAR],[])),writes(rpl([rGLOBAL,r6_Rc6,rSTAR],[])),writes(rpl([rGLOBAL,r7_Rc7,rSTAR],[])),writes(rpl([rLOCAL],[])),writes(rpl([rSTAR],[]))]}}
   //task_scheduler_init init;
   ParallelForProcessor parallelProcessor;
 
@@ -878,13 +893,14 @@ int main WRITES(*) (int argc, char **argv ARG(Global, Global)) {
       root = local_root;
       gDiameter = diameter;
 
+      /* Commenting out because we need index parameterized arrays to support this
       if (grainSize != 0) {
         blocked_range<int> grainedRange(0, nbodies, grainSize);
         parallel_for(grainedRange, parallelProcessor);
       } else {
         blocked_range<int> range(0, nbodies);
         parallel_for(range, parallelProcessor);
-      }
+      }*/
 
       //OctTreeInternalNode::RecycleTree(); // recycle the tree
 

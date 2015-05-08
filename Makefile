@@ -17,7 +17,7 @@ CPPFLAGS +=
 
 PROG := driver/BarnesHut
 
-ONEFILE := driver/BarnesHut.cc
+ONEFILE := driver/BarnesHut.cpp
 
 SRCS += src/BarnesHut.cpp
 
