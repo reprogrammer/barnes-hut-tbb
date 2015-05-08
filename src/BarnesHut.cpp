@@ -537,7 +537,7 @@ void OctTreeInternalNode::InsertAll /*PARAM(Rb) WRITES(Rb:*, PiN:*) */(OctTreeLe
   OctTreeLeafNode **partition5 ARG(Local, Rb:Rp5, Rb:Rp5);
   OctTreeLeafNode **partition6 ARG(Local, Rb:Rp6, Rb:Rp6);
   OctTreeLeafNode **partition7 ARG(Local, Rb:Rp7, Rb:Rp7);
-  int partitionSize[8];
+  int partitionSize ARG(Local) [8];
   partition0 = new OctTreeLeafNode*[n];
   partition1 = new OctTreeLeafNode*[n];
   partition2 = new OctTreeLeafNode*[n];
@@ -548,6 +548,7 @@ void OctTreeInternalNode::InsertAll /*PARAM(Rb) WRITES(Rb:*, PiN:*) */(OctTreeLe
   partition7 = new OctTreeLeafNode*[n];
   Partition(b, n, partitionSize, partition0, partition1, partition2,
       partition3, partition4, partition5, partition6, partition7);
+  // int *partSize ARG(Global) = partitionSize;
   InsertChildren(r, partitionSize, partition0, partition1, partition2,
       partition3, partition4, partition5, partition6, partition7);
   //for (int i = 0; i < 8; ++i) {
