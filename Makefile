@@ -18,8 +18,10 @@ CPPFLAGS +=
 PROG := driver/BarnesHut
 
 ONEFILE := driver/BarnesHut.cpp
+ONEFILEFULL := driver/BarnesHut-full.cpp
 
 SRCS += src/BarnesHut.cpp
+SRCSFULL += src/BarnesHut-full.cpp
 
 # This order must support concatenating all the headers as one file with includes removed.
 HEADERS = src/asap.h
@@ -36,15 +38,15 @@ clean:
 
 .PHONY: check
 check: $(ONEFILE)
-	$(CHECKER) $(CHECKERFLAGS) $(INCLUDES) $(ONEFILE)
+	$(CHECKER) $(CHECKERFLAGS) $(INCLUDES) $(ONEFILE) $(ONEFILEFULL)
 
 .PHONY: infer
 infer: $(ONEFILE)
 	$(INFERER) $(INFERERFLAGS) $(INCLUDES) $(ONEFILE)
 
 .PHONY: inferfull
-inferfull: $(ONEFILE)
-	$(FULLINFERER) $(FULLINFERERFLAGS) $(INCLUDES) $(ONEFILE)
+inferfull: $(ONEFILEFULL)
+	$(FULLINFERER) $(FULLINFERERFLAGS) $(INCLUDES) $(ONEFILEFULL)
 
 $(PROG): $(OBJS)
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $(PROG)
@@ -54,4 +56,7 @@ driver/%.o: src/%.cpp src/*.h
 
 $(ONEFILE): src/*.cpp src/*.h
 	cat $(HEADERS) $(SRCS) | egrep -v "include \"[^.]" | egrep -v "\#line" > $(ONEFILE)
+
+$(ONEFILEFULL): src/*.cpp src/*.h
+	cat $(HEADERS) $(SRCSFULL) | egrep -v "include \"[^.]" | egrep -v "\#line" > $(ONEFILEFULL)
 
