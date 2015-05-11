@@ -27,11 +27,14 @@
 
 //#define DEBUG
 
-//#include <cstdlib>
-#include <cstdio>
-#include <cmath>
-#include <sys/time.h>
-//#include <iostream>
+
+#ifdef COMPILE_MAIN
+  #include <cstdio>
+  #include <cmath>
+  #include <sys/time.h>
+#else
+  double sqrt(double x);
+#endif // defined COMPILE_MAIN
 
 #include "asap.h"
 //#include "tbb/blocked_range.h"
@@ -77,7 +80,7 @@ class /*PARAM(R)*/ OctTreeLeafNode;
 static OctTreeLeafNode **bodies ARG_(Global, Global, Global) ; // the n bodies
 
 
-class PARAM(PN) OctTreeNode {
+class PARAM(PN) OctTreeNode { // expected-warning{{region arguments: class OctTreeNode &&, IN:<empty>, ArgV:[p33_PN]}} // expected-warning{{region arguments: const class OctTreeNode &, IN:<empty>, ArgV:[p33_PN]}}
 public:
   int type ARG_(PN); // CELL or BODY
   double mass ARG_(PN);
@@ -706,6 +709,79 @@ static int nbodies; // number of bodies in system
 static int timesteps; // number of time steps to run
 static int grainSize; // number of parallel tasks
 
+
+static inline int min(long a, long b) { // expected-warning{{Inferred Effect Summary for min: [writes(rpl([rLOCAL],[]))]}}
+  if (a < b)
+    a = b;
+  return a;
+}
+
+static OctTreeInternalNode *root ARG_(Global);
+static double gDiameter;
+
+#ifdef COMPILE_MAIN
+static inline void ComputeCenterAndDiameter WRITES(Global)
+  (const int n, double &diameter ARG_(Global), double &centerx ARG_(Global),
+   double &centery ARG_(Global), double &centerz ARG_(Global)) { // expected-warning{{Inferred Effect Summary for ComputeCenterAndDiameter: [writes(rpl([rGLOBAL],[])),writes(rpl([rLOCAL],[]))]}}
+  double minx, miny, minz;
+  double maxx, maxy, maxz;
+  double posx, posy, posz;
+
+  minx = 1.0E90;
+  miny = 1.0E90;
+  minz = 1.0E90;
+  maxx = -1.0E90;
+  maxy = -1.0E90;
+  maxz = -1.0E90;
+
+  for (int i = 0; i < n; i++) {
+    posx = bodies[i]->posx;
+    posy = bodies[i]->posy;
+    posz = bodies[i]->posz;
+
+    if (minx > posx)
+      minx = posx;
+    if (miny > posy)
+      miny = posy;
+    if (minz > posz)
+      minz = posz;
+
+    if (maxx < posx)
+      maxx = posx;
+    if (maxy < posy)
+      maxy = posy;
+    if (maxz < posz)
+      maxz = posz;
+  }
+
+  diameter = maxx - minx;
+  if (diameter < (maxy - miny))
+    diameter = (maxy - miny);
+  if (diameter < (maxz - minz))
+    diameter = (maxz - minz);
+
+  centerx = (maxx + minx) * 0.5;
+  centery = (maxy + miny) * 0.5;
+  centerz = (maxz + minz) * 0.5;
+}
+static void PrintDouble(double d) { // expected-warning{{Inferred Effect Summary for PrintDouble: [writes(rpl([rLOCAL],[]))]}}
+  int i;
+  char str ARG_(Local) [16];
+
+  sprintf(str, "%.4lE", d);
+
+  i = 0;
+  while ((i < 16) && (str[i] != 0)) {
+    if ((str[i] == 'E') && (str[i + 1] == '-') && (str[i + 2] == '0') && (str[i + 3] == '0')) {
+      printf("E00");
+      i += 3;
+    } else if (str[i] != '+') {
+      printf("%c", str[i]);
+    }
+    i++;
+  }
+}
+
 static inline int ReadInput WRITES(Global) (char *filename) { // expected-warning{{Inferred Effect Summary for ReadInput: [writes(rpl([rGLOBAL],[])),writes(rpl([rLOCAL],[]))]}}
   double vx, vy, vz;
   FILE *f ARG_(Local, *);
@@ -755,78 +831,6 @@ static inline int ReadInput WRITES(Global) (char *filename) { // expected-warnin
   fclose(f);
   return 0;
 }
-
-static inline void ComputeCenterAndDiameter WRITES(Global)
-  (const int n, double &diameter ARG_(Global), double &centerx ARG_(Global),
-   double &centery ARG_(Global), double &centerz ARG_(Global)) { // expected-warning{{Inferred Effect Summary for ComputeCenterAndDiameter: [writes(rpl([rGLOBAL],[])),writes(rpl([rLOCAL],[]))]}}
-  double minx, miny, minz;
-  double maxx, maxy, maxz;
-  double posx, posy, posz;
-
-  minx = 1.0E90;
-  miny = 1.0E90;
-  minz = 1.0E90;
-  maxx = -1.0E90;
-  maxy = -1.0E90;
-  maxz = -1.0E90;
-
-  for (int i = 0; i < n; i++) {
-    posx = bodies[i]->posx;
-    posy = bodies[i]->posy;
-    posz = bodies[i]->posz;
-
-    if (minx > posx)
-      minx = posx;
-    if (miny > posy)
-      miny = posy;
-    if (minz > posz)
-      minz = posz;
-
-    if (maxx < posx)
-      maxx = posx;
-    if (maxy < posy)
-      maxy = posy;
-    if (maxz < posz)
-      maxz = posz;
-  }
-
-  diameter = maxx - minx;
-  if (diameter < (maxy - miny))
-    diameter = (maxy - miny);
-  if (diameter < (maxz - minz))
-    diameter = (maxz - minz);
-
-  centerx = (maxx + minx) * 0.5;
-  centery = (maxy + miny) * 0.5;
-  centerz = (maxz + minz) * 0.5;
-}
-
-static inline int min(long a, long b) { // expected-warning{{Inferred Effect Summary for min: [writes(rpl([rLOCAL],[]))]}}
-  if (a < b)
-    a = b;
-  return a;
-}
-
-static void PrintDouble(double d) { // expected-warning{{Inferred Effect Summary for PrintDouble: [writes(rpl([rLOCAL],[]))]}}
-  int i;
-  char str ARG_(Local) [16];
-
-  sprintf(str, "%.4lE", d);
-
-  i = 0;
-  while ((i < 16) && (str[i] != 0)) {
-    if ((str[i] == 'E') && (str[i + 1] == '-') && (str[i + 2] == '0') && (str[i + 3] == '0')) {
-      printf("E00");
-      i += 3;
-    } else if (str[i] != '+') {
-      printf("%c", str[i]);
-    }
-    i++;
-  }
-}
-
-static OctTreeInternalNode *root ARG_(Global);
-static double gDiameter;
 
 class ParallelForProcessor {
 public:
@@ -935,4 +939,4 @@ int main WRITES(*) (int argc, char **argv ARG_(Global, Global)) { // expected-wa
 
   return 0;
 }
-
+#endif // defined COMPILE_MAIN
